@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>🌍 GeoQuest – Révision G2.1</title>
-    <!-- Leaflet CSS -->
+    <title>🌍 GeoQuest – Frontières Réelles (stable)</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <!-- Turf.js -->
-    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -19,20 +18,17 @@
             --surface: #132c36;
             --border: #2a4a58;
             --text: #eaf2f5;
-            --muted: #9bb7c4;
             --accent: #4f9da6;
-            --accent-light: #6ec4ce;
             --green: #2ecc71;
             --red: #e74c3c;
             --gold: #f1c40f;
-            --radius: 20px;
-            --shadow: 0 8px 20px rgba(0,0,0,0.5);
+            --radius: 24px;
+            --shadow: 0 12px 28px rgba(0,0,0,0.6);
         }
         body {
-            font-family: 'Segoe UI', 'Poppins', system-ui, sans-serif;
+            font-family: 'Segoe UI', system-ui, sans-serif;
             background: var(--bg);
             color: var(--text);
-            min-height: 100vh;
             padding: 16px;
             display: flex;
             justify-content: center;
@@ -51,187 +47,139 @@
             flex-wrap: wrap;
             gap: 15px;
             background: var(--surface);
-            padding: 16px 24px;
+            padding: 14px 24px;
             border-radius: var(--radius);
             border: 1px solid var(--border);
             box-shadow: var(--shadow);
         }
         .logo h1 {
-            font-size: 24px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #a8e6cf, #d4edf5);
+            font-size: 26px;
+            background: linear-gradient(135deg, #f9e79f, #a8e6cf, #6ec4ce);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            letter-spacing: 1px;
         }
         .mode-switch {
             display: flex;
             gap: 8px;
             background: #1c3e4a;
-            padding: 5px;
-            border-radius: 50px;
+            padding: 6px;
+            border-radius: 60px;
         }
         .mode-btn {
-            padding: 10px 24px;
+            padding: 8px 20px;
             border-radius: 40px;
             border: none;
             background: transparent;
-            font-weight: 600;
-            font-size: 16px;
+            font-weight: 700;
             cursor: pointer;
-            color: var(--muted);
+            color: #9bb7c4;
             transition: 0.2s;
         }
         .mode-btn.active {
             background: var(--accent);
             color: #0b1a20;
-            box-shadow: 0 0 10px #4f9da6aa;
+            box-shadow: 0 0 12px #4f9da6aa;
         }
         .difficulty-selector {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             background: #1c3e4a;
-            padding: 5px 15px;
-            border-radius: 40px;
-        }
-        .difficulty-selector label {
-            color: var(--muted);
-            font-weight: 500;
+            padding: 6px 20px;
+            border-radius: 60px;
         }
         select {
             background: var(--surface);
             border: 1px solid var(--border);
             color: var(--text);
-            padding: 8px 14px;
-            border-radius: 30px;
-            font-weight: 500;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-weight: 600;
             cursor: pointer;
-            outline: none;
         }
-        .frontier-toggle {
+        .stats-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: space-between;
+            background: var(--surface);
+            border-radius: 60px;
+            padding: 12px 24px;
+            border: 1px solid var(--border);
+        }
+        .stat-card {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            background: #0d262f;
+            padding: 6px 20px;
+            border-radius: 50px;
         }
-        .frontier-toggle label {
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+        .stat-value {
+            font-size: 28px;
+            font-weight: 800;
         }
-        #map-container {
-            border-radius: var(--radius);
-            overflow: hidden;
-            border: 2px solid var(--border);
-            box-shadow: var(--shadow);
-        }
+        .streak-fire { color: var(--gold); text-shadow: 0 0 5px orange; }
+        .lives { color: var(--red); letter-spacing: 4px; }
         #map {
-            height: 520px;
+            height: 500px;
             width: 100%;
             background: #9ec5d4;
             cursor: crosshair;
+            border-radius: var(--radius);
+            border: 2px solid var(--border);
         }
         .game-panel {
             background: var(--surface);
             border-radius: var(--radius);
             padding: 24px;
             border: 1px solid var(--border);
-            box-shadow: var(--shadow);
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        .target-area {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
         }
         .target-box {
             background: linear-gradient(145deg, #1e4a5a, #0e2f3c);
-            padding: 16px 36px;
+            padding: 12px 32px;
             border-radius: 80px;
-            border: 2px solid var(--accent-light);
-            box-shadow: inset 0 2px 5px #00000033, 0 6px 0 #0b1a20;
+            border: 2px solid var(--accent);
+            display: inline-block;
+            margin-bottom: 20px;
         }
         .target-label {
-            font-size: 38px;
+            font-size: 36px;
             font-weight: 800;
             color: #f0f9ff;
-            text-shadow: 0 4px 0 #0b1a20;
-            letter-spacing: 1px;
+            text-shadow: 0 3px 0 #0b1a20;
         }
-        .score-panel {
-            display: flex;
-            gap: 20px;
-        }
-        .score-badge {
-            background: #1b3f4d;
-            border-radius: 50px;
-            padding: 8px 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border: 1px solid var(--border);
-        }
-        .score-icon { font-size: 24px; }
-        .score-value {
-            font-size: 28px;
-            font-weight: 800;
-        }
-        .score-good .score-value { color: var(--green); }
-        .score-bad .score-value { color: var(--red); }
         .feedback {
-            padding: 16px 22px;
+            padding: 18px 24px;
             border-radius: 60px;
             font-size: 18px;
             font-weight: 600;
             background: #1b3f4d;
             border-left: 8px solid var(--accent);
-            box-shadow: inset 0 2px 5px #00000033;
-            min-height: 70px;
-            display: flex;
-            align-items: center;
+            margin: 20px 0;
         }
         .feedback.correct { border-left-color: var(--green); background: #1e4a3e; }
         .feedback.wrong { border-left-color: var(--red); background: #5a2e2e; }
-        .actions {
-            display: flex;
-            gap: 15px;
-            justify-content: flex-end;
-        }
         .btn {
-            padding: 14px 28px;
+            padding: 12px 28px;
             border-radius: 60px;
             border: none;
-            font-weight: 700;
+            font-weight: 800;
             font-size: 16px;
             cursor: pointer;
-            transition: all 0.15s;
             background: #2c5e6e;
             color: white;
             border-bottom: 4px solid #14323e;
-            box-shadow: 0 4px 8px #00000040;
+            margin: 5px;
         }
-        .btn-primary {
-            background: var(--accent);
-            border-bottom-color: #2a6b75;
-            color: #0b1a20;
-        }
+        .btn-primary { background: var(--accent); border-bottom-color: #2a6b75; color: #0b1a20; }
         .btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
-        .btn:active { transform: translateY(2px); box-shadow: none; }
-        .leaderboard-btn {
-            background: transparent;
-            border: 2px dashed var(--muted);
-            color: var(--muted);
-            padding: 8px 18px;
-        }
         .modal {
             display: none;
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             background: #000000cc;
             align-items: center;
             justify-content: center;
@@ -241,83 +189,43 @@
             background: var(--surface);
             border-radius: 32px;
             padding: 32px;
-            max-width: 600px;
+            max-width: 700px;
             width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
             border: 2px solid var(--accent);
         }
-        .modal-content h2 { color: var(--gold); margin-bottom: 20px; }
         .leaderboard-table {
             width: 100%;
             border-collapse: collapse;
         }
         .leaderboard-table th, .leaderboard-table td {
-            padding: 12px 8px;
+            padding: 10px 8px;
             text-align: left;
             border-bottom: 1px solid var(--border);
         }
-        .close-btn {
-            margin-top: 20px;
-            background: var(--accent);
-            border: none;
-            padding: 12px 24px;
-            border-radius: 40px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .legend-tip {
-            font-size: 14px;
-            color: var(--muted);
-            display: flex;
-            gap: 20px;
-        }
-        .user-marker {
-            background: #3b5bdb;
+        .user-marker, .solution-star {
             border-radius: 50%;
-            width: 24px !important;
-            height: 24px !important;
             border: 3px solid white;
-            box-shadow: 0 0 15px #3b5bdb;
-            font-size: 18px;
-            line-height: 22px;
-            text-align: center;
-            color: white;
-        }
-        .solution-star {
-            background: #f1c40f;
-            border-radius: 50%;
-            width: 32px !important;
-            height: 32px !important;
-            border: 3px solid #2ecc71;
-            box-shadow: 0 0 20px gold;
-            font-size: 24px;
-            line-height: 30px;
             text-align: center;
         }
-        .distance-tooltip {
-            background: #0b1a20dd;
-            border: none;
-            color: white;
-            font-weight: bold;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 14px;
-            box-shadow: 0 2px 8px black;
-        }
+        .user-marker { background: #3b5bdb; width: 24px !important; height: 24px !important; line-height: 22px; }
+        .solution-star { background: gold; width: 32px !important; height: 32px !important; line-height: 30px; font-size: 24px; }
+        .distance-tooltip { background: #0b1a20dd; border: none; color: white; font-weight: bold; padding: 4px 12px; border-radius: 20px; }
+        .loading { text-align: center; padding: 20px; background: #1c3e4a; border-radius: 20px; }
     </style>
 </head>
 <body>
 <div id="app">
     <div class="header">
-        <div class="logo">
-            <h1>🗺️ GEOQUEST · G2.1</h1>
-        </div>
+        <div class="logo"><h1>🗺️ GEOQUEST · FRONTIÈRES 100% FONCTIONNELLES</h1></div>
         <div class="mode-switch">
             <button class="mode-btn active" data-mode="pays">🌍 Pays</button>
             <button class="mode-btn" data-mode="metropoles">🏙️ Métropoles</button>
             <button class="mode-btn" data-mode="mixte">🔀 Mixte</button>
         </div>
         <div class="difficulty-selector">
-            <label>🎚️ Difficulté</label>
+            <label>🎚️ DIFFICULTÉ</label>
             <select id="difficultySelect">
                 <option value="1000">Débutant (1000 km)</option>
                 <option value="700">Facile (700 km)</option>
@@ -328,54 +236,37 @@
                 <option value="1">Impossible (1 km)</option>
             </select>
         </div>
-        <div class="frontier-toggle">
-            <label>
-                <input type="checkbox" id="frontierCheckbox" checked> 🧭 Frontières
-            </label>
-            <button class="btn leaderboard-btn" id="showLeaderboardBtn">🏆 Classement</button>
-        </div>
+        <button class="btn" id="showLeaderboardBtn">🏆 CLASSEMENT</button>
     </div>
 
-    <div id="map-container">
-        <div id="map"></div>
+    <div class="stats-row">
+        <div class="stat-card"><span>⭐</span><div><span class="stat-value" id="pointsDisplay">0</span><span> PTS</span></div></div>
+        <div class="stat-card"><span>🔥</span><div><span class="stat-value streak-fire" id="streakDisplay">0</span><span> COMBO</span></div></div>
+        <div class="stat-card"><span>❤️</span><div><span class="stat-value lives" id="livesDisplay">3</span><span> VIES</span></div></div>
+        <div class="stat-card"><span>🏅</span><div><span class="stat-value" id="highScoreDisplay">0</span><span> RECORD</span></div></div>
+        <div class="stat-card"><span>✅</span><div><span class="stat-value" id="correctCountDisplay">0</span><span> RÉUSSITES</span></div></div>
     </div>
+
+    <div id="map"></div>
 
     <div class="game-panel">
-        <div class="target-area">
-            <div class="target-box">
-                <span class="target-label" id="targetName">---</span>
-            </div>
-            <div class="score-panel">
-                <div class="score-badge score-good">
-                    <span class="score-icon">✅</span>
-                    <span class="score-value" id="scoreGood">0</span>
-                </div>
-                <div class="score-badge score-bad">
-                    <span class="score-icon">❌</span>
-                    <span class="score-value" id="scoreBad">0</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="feedback" id="feedbackMessage">
-            🎯 Prêt ? Clique sur la carte !
-        </div>
-
+        <div class="target-box"><span class="target-label" id="targetName">---</span></div>
+        <div class="feedback" id="feedbackMessage">🌍 Chargement des frontières...</div>
         <div class="actions">
-            <button class="btn" id="skipBtn">⏩ Passer</button>
-            <button class="btn btn-primary" id="nextBtn">▶️ Suivant</button>
+            <button class="btn" id="skipBtn">⏩ PASSER</button>
+            <button class="btn btn-primary" id="nextBtn">▶️ SUIVANT</button>
+            <button class="btn" id="newGameBtn">🔄 NOUVELLE PARTIE</button>
         </div>
-        <div class="legend-tip">
-            <span>⭐ Trait + distance après validation</span>
-            <span id="frontierWarning" style="color:#e67e22;"></span>
+        <div class="legend-tip" style="font-size:13px; margin-top:12px; text-align:center;">
+            ⭐ Pays → clique n'importe où à l'intérieur de ses frontières.<br>
+            📍 Métropole → clique à moins du seuil (distance au point).
         </div>
     </div>
 </div>
 
-<!-- Modal Leaderboard -->
 <div class="modal" id="leaderboardModal">
     <div class="modal-content">
-        <h2>🏅 Meilleurs scores</h2>
+        <h2>🏆 HALL OF FAME</h2>
         <div id="leaderboardContent">Chargement...</div>
         <button class="close-btn" id="closeModalBtn">Fermer</button>
     </div>
@@ -383,9 +274,22 @@
 
 <script>
     (function(){
-        "use strict";
+        // ---------- LISTES DES CIBLES ----------
+        const PAYS_NOMS_FR = [
+            "Brésil", "Russie", "Inde", "Chine", "Afrique du Sud", "Mexique", "Argentine",
+            "Pologne", "Nigéria", "Turquie", "Arabie Saoudite", "Pakistan", "Vietnam",
+            "Thaïlande", "Malaisie", "Philippines", "Indonésie"
+        ];
+        // Correspondance français -> anglais pour le GeoJSON (basé sur le champ "ADMIN" du fichier countries.geo.json)
+        const PAYS_MAP = {
+            "Brésil": "Brazil", "Russie": "Russia", "Inde": "India", "Chine": "China",
+            "Afrique du Sud": "South Africa", "Mexique": "Mexico", "Argentine": "Argentina",
+            "Pologne": "Poland", "Nigéria": "Nigeria", "Turquie": "Turkey",
+            "Arabie Saoudite": "Saudi Arabia", "Pakistan": "Pakistan", "Vietnam": "Vietnam",
+            "Thaïlande": "Thailand", "Malaisie": "Malaysia", "Philippines": "Philippines",
+            "Indonésie": "Indonesia"
+        };
 
-        // ---------- DONNÉES ----------
         const METROPOLES = [
             { name: "New York", lat: 40.7128, lng: -74.0060 },
             { name: "Londres", lat: 51.5074, lng: -0.1278 },
@@ -393,299 +297,286 @@
             { name: "Shanghaï", lat: 31.2304, lng: 121.4737 },
             { name: "Tokyo", lat: 35.6895, lng: 139.6917 },
             { name: "Dubaï", lat: 25.2048, lng: 55.2708 },
-            { name: "Beijing", lat: 39.9042, lng: 116.4074 },
             { name: "Sydney", lat: -33.8688, lng: 151.2093 },
             { name: "Hong-Kong", lat: 22.3193, lng: 114.1694 },
             { name: "Singapour", lat: 1.3521, lng: 103.8198 },
             { name: "Los Angeles", lat: 34.0522, lng: -118.2437 },
-            { name: "Chicago", lat: 41.8781, lng: -87.6298 },
             { name: "Séoul", lat: 37.5665, lng: 126.9780 },
-            { name: "Moscou", lat: 55.7558, lng: 37.6173 },
             { name: "Sao Paulo", lat: -23.5505, lng: -46.6333 },
             { name: "Milan", lat: 45.4642, lng: 9.1900 },
-            { name: "Mexico", lat: 19.4326, lng: -99.1332 },
             { name: "Mumbaï", lat: 19.0760, lng: 72.8777 },
             { name: "Jakarta", lat: -6.2088, lng: 106.8456 }
         ];
 
-        const PAYS_LIST = [
-            { nameFr: "Brésil", nameEn: "Brazil" },
-            { nameFr: "Russie", nameEn: "Russia" },
-            { nameFr: "Inde", nameEn: "India" },
-            { nameFr: "Chine", nameEn: "China" },
-            { nameFr: "Afrique du Sud", nameEn: "South Africa" },
-            { nameFr: "Mexique", nameEn: "Mexico" },
-            { nameFr: "Argentine", nameEn: "Argentina" },
-            { nameFr: "Pologne", nameEn: "Poland" },
-            { nameFr: "Nigéria", nameEn: "Nigeria" },
-            { nameFr: "Turquie", nameEn: "Turkey" },
-            { nameFr: "Arabie Saoudite", nameEn: "Saudi Arabia" },
-            { nameFr: "Pakistan", nameEn: "Pakistan" },
-            { nameFr: "Vietnam", nameEn: "Vietnam" },
-            { nameFr: "Thaïlande", nameEn: "Thailand" },
-            { nameFr: "Malaisie", nameEn: "Malaysia" },
-            { nameFr: "Philippines", nameEn: "Philippines" },
-            { nameFr: "Indonésie", nameEn: "Indonesia" }
-        ];
-
-        // GeoJSON intégré pour les 17 pays (simplifié mais fonctionnel)
-        const EMBEDDED_GEOJSON = {
-            "type": "FeatureCollection",
-            "features": [
-                // Coordonnées simplifiées (bbox/polygone) pour chaque pays
-                // Afin de rester concis, je mets un polygone approximatif pour chacun.
-                // En production, on peut utiliser un fichier plus précis.
-                {"type":"Feature","properties":{"name":"Brazil"},"geometry":{"type":"Polygon","coordinates":[[[-74,-34],[-34,-34],[-34,5],[-74,5],[-74,-34]]]}},
-                {"type":"Feature","properties":{"name":"Russia"},"geometry":{"type":"Polygon","coordinates":[[[19,41],[169,41],[169,82],[19,82],[19,41]]]}},
-                {"type":"Feature","properties":{"name":"India"},"geometry":{"type":"Polygon","coordinates":[[[68,6],[97,6],[97,36],[68,36],[68,6]]]}},
-                {"type":"Feature","properties":{"name":"China"},"geometry":{"type":"Polygon","coordinates":[[[73,18],[135,18],[135,54],[73,54],[73,18]]]}},
-                {"type":"Feature","properties":{"name":"South Africa"},"geometry":{"type":"Polygon","coordinates":[[[16,-35],[33,-35],[33,-22],[16,-22],[16,-35]]]}},
-                {"type":"Feature","properties":{"name":"Mexico"},"geometry":{"type":"Polygon","coordinates":[[[-118,14],[-86,14],[-86,33],[-118,33],[-118,14]]]}},
-                {"type":"Feature","properties":{"name":"Argentina"},"geometry":{"type":"Polygon","coordinates":[[[-74,-55],[-53,-55],[-53,-21],[-74,-21],[-74,-55]]]}},
-                {"type":"Feature","properties":{"name":"Poland"},"geometry":{"type":"Polygon","coordinates":[[[14,49],[24,49],[24,55],[14,55],[14,49]]]}},
-                {"type":"Feature","properties":{"name":"Nigeria"},"geometry":{"type":"Polygon","coordinates":[[[2,4],[15,4],[15,14],[2,14],[2,4]]]}},
-                {"type":"Feature","properties":{"name":"Turkey"},"geometry":{"type":"Polygon","coordinates":[[[25,35],[45,35],[45,42],[25,42],[25,35]]]}},
-                {"type":"Feature","properties":{"name":"Saudi Arabia"},"geometry":{"type":"Polygon","coordinates":[[[34,16],[56,16],[56,32],[34,32],[34,16]]]}},
-                {"type":"Feature","properties":{"name":"Pakistan"},"geometry":{"type":"Polygon","coordinates":[[[60,23],[78,23],[78,37],[60,37],[60,23]]]}},
-                {"type":"Feature","properties":{"name":"Vietnam"},"geometry":{"type":"Polygon","coordinates":[[[102,8],[110,8],[110,24],[102,24],[102,8]]]}},
-                {"type":"Feature","properties":{"name":"Thailand"},"geometry":{"type":"Polygon","coordinates":[[[97,5],[106,5],[106,21],[97,21],[97,5]]]}},
-                {"type":"Feature","properties":{"name":"Malaysia"},"geometry":{"type":"Polygon","coordinates":[[[99,0],[120,0],[120,8],[99,8],[99,0]]]}},
-                {"type":"Feature","properties":{"name":"Philippines"},"geometry":{"type":"Polygon","coordinates":[[[116,4],[127,4],[127,21],[116,21],[116,4]]]}},
-                {"type":"Feature","properties":{"name":"Indonesia"},"geometry":{"type":"Polygon","coordinates":[[[94,-11],[141,-11],[141,6],[94,6],[94,-11]]]}}
-            ]
-        };
-
-        // ---------- VARIABLES ----------
+        // ---------- ÉTAT JEU ----------
         let map;
-        let frontierLayer;
-        let countriesGeoJson = EMBEDDED_GEOJSON; // fallback intégré
         let currentMode = 'pays';
         let currentTarget = null;
-        let userMarker = null;
-        let solutionLayer = null;
-        let distanceLine = null;
         let clickEnabled = true;
-        let scoreGood = 0;
-        let scoreBad = 0;
+        let isGameActive = true;
+        let totalPoints = 0;
+        let currentStreak = 0;
+        let lives = 3;
+        let correctAnswers = 0;
+        let currentHighScore = 0;
+
+        let countryGeometries = new Map(); // nom anglais -> feature (polygone)
 
         // Éléments DOM
         const targetNameEl = document.getElementById('targetName');
-        const scoreGoodEl = document.getElementById('scoreGood');
-        const scoreBadEl = document.getElementById('scoreBad');
+        const pointsDisplay = document.getElementById('pointsDisplay');
+        const streakDisplay = document.getElementById('streakDisplay');
+        const livesDisplay = document.getElementById('livesDisplay');
+        const highScoreDisplay = document.getElementById('highScoreDisplay');
+        const correctCountSpan = document.getElementById('correctCountDisplay');
         const feedbackEl = document.getElementById('feedbackMessage');
         const modeBtns = document.querySelectorAll('.mode-btn');
-        const frontierCheck = document.getElementById('frontierCheckbox');
         const difficultySelect = document.getElementById('difficultySelect');
         const skipBtn = document.getElementById('skipBtn');
         const nextBtn = document.getElementById('nextBtn');
+        const newGameBtn = document.getElementById('newGameBtn');
         const showLeaderboardBtn = document.getElementById('showLeaderboardBtn');
         const modal = document.getElementById('leaderboardModal');
         const closeModalBtn = document.getElementById('closeModalBtn');
         const leaderboardContent = document.getElementById('leaderboardContent');
-        const frontierWarning = document.getElementById('frontierWarning');
 
-        // Seuil
         function getThreshold() { return parseFloat(difficultySelect.value); }
+        function getBasePoints() {
+            const t = getThreshold();
+            if (t >= 1000) return 10;
+            if (t >= 700) return 15;
+            if (t >= 300) return 25;
+            if (t >= 100) return 50;
+            if (t >= 50) return 85;
+            if (t >= 10) return 160;
+            return 350;
+        }
+        function getStreakMultiplier() { return Math.min(1 + currentStreak * 0.12, 3.0); }
 
-        // Gestion frontières selon difficulté
-        function updateFrontierRestriction() {
-            const threshold = getThreshold();
-            const hardModes = threshold <= 100;
-            if (hardModes) {
-                frontierCheck.checked = false;
-                frontierCheck.disabled = true;
-                frontierWarning.textContent = '⚠️ Frontières désactivées (niveau Difficile+)';
-                if (frontierLayer) map.removeLayer(frontierLayer);
+        function updateUI() {
+            pointsDisplay.textContent = totalPoints;
+            streakDisplay.textContent = currentStreak;
+            livesDisplay.textContent = '❤️'.repeat(lives) + '🖤'.repeat(3 - lives);
+            correctCountSpan.textContent = correctAnswers;
+            highScoreDisplay.textContent = currentHighScore;
+        }
+
+        function loadHighScore() {
+            const key = `hs_${currentMode}_${getThreshold()}`;
+            currentHighScore = parseInt(localStorage.getItem(key)) || 0;
+            highScoreDisplay.textContent = currentHighScore;
+        }
+        function saveHighScore() {
+            if (totalPoints > currentHighScore) {
+                currentHighScore = totalPoints;
+                localStorage.setItem(`hs_${currentMode}_${getThreshold()}`, currentHighScore);
+                highScoreDisplay.textContent = currentHighScore;
+                feedbackEl.innerHTML = `🏆 NOUVEAU RECORD ! ${totalPoints} points ! 🏆`;
+                setTimeout(() => { if(isGameActive && currentTarget) refreshFeedback(); }, 2000);
+            }
+        }
+        function saveLeaderboard() {
+            if (totalPoints === 0) return;
+            const key = `lb_${currentMode}_${getThreshold()}`;
+            let scores = JSON.parse(localStorage.getItem(key)) || [];
+            scores.push({ points: totalPoints, date: new Date().toLocaleDateString(), correct: correctAnswers });
+            scores.sort((a,b) => b.points - a.points);
+            scores = scores.slice(0, 10);
+            localStorage.setItem(key, JSON.stringify(scores));
+        }
+        function displayLeaderboard() {
+            let html = '';
+            const modes = ['pays', 'metropoles', 'mixte'];
+            const diffs = ['1000','700','300','100','50','10','1'];
+            for (let diff of diffs) {
+                for (let mode of modes) {
+                    const key = `lb_${mode}_${diff}`;
+                    const data = JSON.parse(localStorage.getItem(key)) || [];
+                    if (data.length) {
+                        html += `<h3>${mode.toUpperCase()} · seuil ${diff} km</h3><table class="leaderboard-table"><tr><th>Score</th><th>Réussites</th><th>Date</th></tr>`;
+                        data.slice(0,5).forEach(e => {
+                            html += `<tr><td>${e.points}</td><td>${e.correct}</td><td>${e.date}</td></tr>`;
+                        });
+                        html += `</table><br>`;
+                    }
+                }
+            }
+            leaderboardContent.innerHTML = html || '<p>Aucun score. Joue pour entrer au Hall of Fame !</p>';
+        }
+
+        function refreshFeedback() {
+            if(currentTarget)
+                feedbackEl.innerHTML = `🎯 Où se trouve ${currentTarget.name} ? ${currentTarget.type === 'pays' ? '(Clique dans le pays)' : `(Seuil ${getThreshold()} km)`}`;
+        }
+
+        // ---------- CHARGEMENT DES FRONTIÈRES (source fiable) ----------
+        async function loadCountries() {
+            feedbackEl.innerHTML = "⏳ Chargement des frontières (GeoJSON) depuis CDN...";
+            try {
+                // Utilisation du CDN jsDelivr (fiable et CORS-friendly)
+                const response = await fetch('https://cdn.jsdelivr.net/npm/world-geojson@1.0.0/countries.geo.json');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                // Indexer par nom ADMIN
+                for (let feature of data.features) {
+                    const name = feature.properties.ADMIN; // "France", "Brazil", etc.
+                    countryGeometries.set(name, feature);
+                }
+                feedbackEl.innerHTML = "✅ Frontières chargées avec succès ! Prêt à jouer.";
+                setTimeout(() => refreshFeedback(), 1500);
+                pickNewTarget(); // première cible
+            } catch(e) {
+                console.error(e);
+                feedbackEl.innerHTML = "⚠️ ERREUR : impossible de charger les frontières. Vérifie ta connexion internet. Rafraîchis la page.";
+                // On peut quand même jouer en mode métropoles uniquement, mais pour les pays ce sera cassé.
+                // On désactive le mode pays si pas de géométries
+                if (countryGeometries.size === 0) {
+                    feedbackEl.innerHTML += " <br>▶️ Mode pays désactivé (frontières manquantes). Passe en mode Métropoles.";
+                }
+            }
+        }
+
+        function isPointInCountry(lat, lng, paysFr) {
+            const englishName = PAYS_MAP[paysFr];
+            if (!englishName) return false;
+            const feature = countryGeometries.get(englishName);
+            if (!feature) return false;
+            const point = turf.point([lng, lat]);
+            return turf.booleanPointInPolygon(point, feature.geometry);
+        }
+
+        // ---------- CIBLES ----------
+        function pickNewTarget() {
+            if (!isGameActive) return;
+            // Nettoyer marqueurs
+            if (window.userMarker) map.removeLayer(window.userMarker);
+            if (window.solutionMarker) map.removeLayer(window.solutionMarker);
+            if (window.distanceLine) map.removeLayer(window.distanceLine);
+            
+            let pool = [];
+            if (currentMode === 'pays') {
+                if (countryGeometries.size === 0) {
+                    feedbackEl.innerHTML = "⚠️ Frontières non chargées, impossible de jouer en mode pays. Recharge la page ou passe en métropoles.";
+                    return;
+                }
+                pool = PAYS_NOMS_FR.map(n => ({ type: 'pays', name: n }));
+            } else if (currentMode === 'metropoles') {
+                pool = METROPOLES.map(c => ({ type: 'ville', name: c.name, lat: c.lat, lng: c.lng }));
+            } else { // mixte
+                let paysItems = PAYS_NOMS_FR.map(n => ({ type: 'pays', name: n }));
+                let villesItems = METROPOLES.map(c => ({ type: 'ville', name: c.name, lat: c.lat, lng: c.lng }));
+                pool = [...paysItems, ...villesItems];
+            }
+            const rand = pool[Math.floor(Math.random() * pool.length)];
+            if (rand.type === 'pays') {
+                currentTarget = { type: 'pays', name: rand.name };
             } else {
-                frontierCheck.disabled = false;
-                frontierWarning.textContent = '';
-                if (frontierCheck.checked && frontierLayer) {
-                    if (!map.hasLayer(frontierLayer)) frontierLayer.addTo(map);
-                } else if (frontierLayer) {
-                    if (map.hasLayer(frontierLayer)) map.removeLayer(frontierLayer);
-                }
+                currentTarget = { type: 'ville', name: rand.name, lat: rand.lat, lng: rand.lng };
             }
+            targetNameEl.textContent = currentTarget.name;
+            refreshFeedback();
+            clickEnabled = true;
+            map.setView([20, 0], 2);
         }
 
-        // Carte
-        function initMap() {
-            map = L.map('map', {
-                center: [20, 0],
-                zoom: 2,
-                minZoom: 2,
-                maxZoom: 8,
-                zoomControl: true
-            });
-
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; CartoDB',
-                subdomains: 'abcd',
-                maxZoom: 19
-            }).addTo(map);
-
-            // Tenter de charger un GeoJSON plus précis depuis CDN
-            fetch('https://cdn.jsdelivr.net/npm/world-geojson@1.0.0/countries.geo.json')
-                .then(res => res.json())
-                .then(data => {
-                    countriesGeoJson = data; // plus précis
-                    initFrontierLayer();
-                })
-                .catch(() => {
-                    console.warn("Utilisation du GeoJSON intégré (fallback).");
-                    initFrontierLayer();
-                });
-
-            function initFrontierLayer() {
-                frontierLayer = L.geoJSON(countriesGeoJson, {
-                    style: { color: '#c9ae74', weight: 1.5, opacity: 0.8, fill: false },
-                    interactive: false
-                });
-                if (frontierCheck.checked && !frontierCheck.disabled) {
-                    frontierLayer.addTo(map);
-                }
-                if (!currentTarget) pickNewTarget();
-            }
-
-            map.on('click', onMapClick);
-        }
-
-        // Clic
+        // ---------- CLIC ----------
         function onMapClick(e) {
+            if (!isGameActive) {
+                feedbackEl.innerHTML = "💀 Partie terminée. Nouvelle partie.";
+                return;
+            }
             if (!clickEnabled) {
-                feedbackEl.innerHTML = '⏳ Valide ou passe à la suite.';
+                feedbackEl.innerHTML = "⏳ Utilise Suivant ou Passer pour continuer.";
                 return;
             }
             if (!currentTarget) { pickNewTarget(); return; }
 
             const { lat, lng } = e.latlng;
-            const threshold = getThreshold();
             let isCorrect = false;
-            let feedbackText = '';
             let distance = null;
+            let details = "";
 
-            if (userMarker) map.removeLayer(userMarker);
-            userMarker = L.marker([lat, lng], {
-                icon: L.divIcon({ className: 'user-marker', html: '📍', iconSize: [24,24] })
-            }).addTo(map);
-
-            if (solutionLayer) map.removeLayer(solutionLayer);
-            if (distanceLine) map.removeLayer(distanceLine);
-
-            if (currentMode === 'pays' || (currentMode === 'mixte' && currentTarget.type === 'pays')) {
-                const feature = currentTarget.countryFeature;
-                if (!feature) {
-                    feedbackText = '❌ Pays non trouvé.';
-                    isCorrect = false;
-                } else {
-                    const point = turf.point([lng, lat]);
-                    isCorrect = turf.booleanPointInPolygon(point, feature);
-                    if (isCorrect) {
-                        feedbackText = `✅ Parfait ! ${currentTarget.name}`;
-                        scoreGood++;
-                    } else {
-                        feedbackText = `❌ Ce n'est pas ${currentTarget.name}.`;
-                        scoreBad++;
-                    }
-                    solutionLayer = L.geoJSON(feature, {
-                        style: { color: '#2ecc71', weight: 3, fillColor: '#2ecc71', fillOpacity: 0.25 }
-                    }).addTo(map);
-                    try {
-                        map.fitBounds(solutionLayer.getBounds(), { padding: [30,30], maxZoom: 5 });
-                    } catch(e) {}
-                }
+            if (currentTarget.type === 'pays') {
+                // Vérification par frontière
+                isCorrect = isPointInCountry(lat, lng, currentTarget.name);
+                details = isCorrect ? `✅ ${currentTarget.name} trouvé !` : `❌ ${currentTarget.name} n'est pas à cet endroit.`;
             } else {
-                const targetLat = currentTarget.lat;
-                const targetLng = currentTarget.lng;
-                distance = getDistanceKm(lat, lng, targetLat, targetLng);
-                isCorrect = distance <= threshold;
+                const targetLat = currentTarget.lat, targetLng = currentTarget.lng;
+                distance = turf.distance(turf.point([lng, lat]), turf.point([targetLng, targetLat]), { units: 'kilometers' });
+                isCorrect = distance <= getThreshold();
+                details = isCorrect ? `✅ ${currentTarget.name} à ${Math.round(distance)} km` : `❌ ${currentTarget.name} est à ${Math.round(distance)} km (seuil ${getThreshold()} km)`;
+            }
 
+            // Affichage marqueurs
+            if (window.userMarker) map.removeLayer(window.userMarker);
+            if (window.solutionMarker) map.removeLayer(window.solutionMarker);
+            if (window.distanceLine) map.removeLayer(window.distanceLine);
+
+            window.userMarker = L.marker([lat, lng], { icon: L.divIcon({ className: 'user-marker', html: '📍', iconSize: [24,24] }) }).addTo(map);
+            
+            if (currentTarget.type === 'ville') {
                 const starIcon = L.divIcon({ className: 'solution-star', html: '⭐', iconSize: [28,28] });
-                solutionLayer = L.marker([targetLat, targetLng], { icon: starIcon }).addTo(map);
-                solutionLayer.bindPopup(`${currentTarget.name}`).openPopup();
-
-                const points = [[lat, lng], [targetLat, targetLng]];
-                distanceLine = L.polyline(points, {
-                    color: isCorrect ? '#2ecc71' : '#e74c3c',
-                    weight: 3,
-                    dashArray: isCorrect ? null : '8, 6'
-                }).addTo(map);
-                distanceLine.bindTooltip(`${Math.round(distance)} km`, { permanent: true, direction: 'center', className: 'distance-tooltip' });
-
-                if (isCorrect) {
-                    feedbackText = `✅ Correct ! Distance: ${Math.round(distance)} km`;
-                    scoreGood++;
-                } else {
-                    feedbackText = `❌ Écart: ${Math.round(distance)} km (seuil ${threshold} km)`;
-                    scoreBad++;
-                }
-                map.setView([targetLat, targetLng], map.getZoom() > 4 ? map.getZoom() : 4);
-            }
-
-            feedbackEl.className = `feedback ${isCorrect ? 'correct' : 'wrong'}`;
-            feedbackEl.innerHTML = feedbackText;
-            updateScore();
-            clickEnabled = false;
-            saveScoreToLeaderboard();
-        }
-
-        function getDistanceKm(lat1, lon1, lat2, lon2) {
-            const R = 6371;
-            const dLat = (lat2-lat1)*Math.PI/180;
-            const dLon = (lon2-lon1)*Math.PI/180;
-            const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-        }
-
-        function pickNewTarget() {
-            if (userMarker) map.removeLayer(userMarker);
-            if (solutionLayer) map.removeLayer(solutionLayer);
-            if (distanceLine) map.removeLayer(distanceLine);
-            userMarker = null; solutionLayer = null; distanceLine = null;
-
-            let pool = [];
-            if (currentMode === 'pays') pool = PAYS_LIST.map(p => ({ ...p, type: 'pays' }));
-            else if (currentMode === 'metropoles') pool = METROPOLES.map(m => ({ ...m, type: 'metropole' }));
-            else {
-                pool = [
-                    ...PAYS_LIST.map(p => ({ ...p, type: 'pays' })),
-                    ...METROPOLES.map(m => ({ ...m, type: 'metropole' }))
-                ];
-            }
-
-            const rand = pool[Math.floor(Math.random() * pool.length)];
-            if (rand.type === 'pays') {
-                const feature = findCountryFeature(rand.nameEn);
-                currentTarget = {
-                    name: rand.nameFr,
-                    type: 'pays',
-                    countryFeature: feature
-                };
+                window.solutionMarker = L.marker([currentTarget.lat, currentTarget.lng], { icon: starIcon }).addTo(map);
+                const pts = [[lat, lng], [currentTarget.lat, currentTarget.lng]];
+                window.distanceLine = L.polyline(pts, { color: isCorrect ? '#2ecc71' : '#e74c3c', weight: 3, dashArray: isCorrect ? null : '8,6' }).addTo(map);
+                window.distanceLine.bindTooltip(`${Math.round(distance)} km`, { permanent: true, direction: 'center', className: 'distance-tooltip' });
+                map.setView([currentTarget.lat, currentTarget.lng], Math.max(map.getZoom(), 4));
             } else {
-                currentTarget = {
-                    name: rand.name,
-                    type: 'metropole',
-                    lat: rand.lat,
-                    lng: rand.lng
-                };
+                // Pour un pays, on centre sur le clic
+                map.setView([lat, lng], map.getZoom());
             }
 
-            targetNameEl.textContent = currentTarget.name;
-            feedbackEl.className = 'feedback';
-            feedbackEl.innerHTML = `🔍 Localise : ${currentTarget.name}`;
+            clickEnabled = false;
+
+            if (isCorrect) {
+                let base = (currentTarget.type === 'pays') ? 30 : getBasePoints();
+                let multiplier = getStreakMultiplier();
+                let earned = Math.floor(base * multiplier);
+                totalPoints += earned;
+                currentStreak++;
+                correctAnswers++;
+                feedbackEl.className = 'feedback correct';
+                feedbackEl.innerHTML = `${details} +${earned} pts (x${multiplier.toFixed(1)}) 🔥 Combo ${currentStreak}`;
+                updateUI();
+                saveHighScore();
+            } else {
+                lives--;
+                currentStreak = 0;
+                feedbackEl.className = 'feedback wrong';
+                feedbackEl.innerHTML = `${details} ❌ Combo perdu ! ❤️ restantes : ${lives}`;
+                updateUI();
+                if (lives <= 0) {
+                    isGameActive = false;
+                    clickEnabled = false;
+                    saveLeaderboard();
+                    saveHighScore();
+                    feedbackEl.className = 'feedback gameover';
+                    feedbackEl.innerHTML = `💀 GAME OVER 💀 Score final : ${totalPoints} points | Réussites : ${correctAnswers}<br>Appuie sur "Nouvelle Partie".`;
+                }
+            }
+            if (isCorrect) {
+                const streakSpan = document.getElementById('streakDisplay');
+                streakSpan.classList.add('combo-pop');
+                setTimeout(() => streakSpan.classList.remove('combo-pop'), 300);
+            }
+        }
+
+        function resetGame() {
+            totalPoints = 0;
+            currentStreak = 0;
+            lives = 3;
+            correctAnswers = 0;
+            isGameActive = true;
             clickEnabled = true;
-            map.setView([20, 0], 2);
-        }
-
-        function findCountryFeature(nameEn) {
-            if (!countriesGeoJson) return null;
-            return countriesGeoJson.features.find(f => 
-                f.properties?.name === nameEn || f.properties?.admin === nameEn
-            );
-        }
-
-        function updateScore() {
-            scoreGoodEl.textContent = scoreGood;
-            scoreBadEl.textContent = scoreBad;
+            updateUI();
+            loadHighScore();
+            pickNewTarget();
+            feedbackEl.className = 'feedback';
+            feedbackEl.innerHTML = "✨ Nouvelle partie ! Clique sur la carte. ✨";
+            if (window.userMarker) map.removeLayer(window.userMarker);
+            if (window.solutionMarker) map.removeLayer(window.solutionMarker);
+            if (window.distanceLine) map.removeLayer(window.distanceLine);
+            window.userMarker = window.solutionMarker = window.distanceLine = null;
         }
 
         function setMode(mode) {
@@ -694,81 +585,30 @@
             resetGame();
         }
 
-        function resetGame() {
-            scoreGood = 0; scoreBad = 0;
-            updateScore();
-            pickNewTarget();
+        function initMap() {
+            map = L.map('map').setView([20, 0], 2);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; CartoDB',
+                subdomains: 'abcd'
+            }).addTo(map);
+            map.on('click', onMapClick);
         }
 
-        // Leaderboard
-        function saveScoreToLeaderboard() {
-            if (scoreGood === 0) return;
-            const key = `geoquest_${currentMode}_${difficultySelect.value}`;
-            const entry = {
-                score: scoreGood,
-                date: new Date().toLocaleDateString(),
-                mode: currentMode,
-                diff: difficultySelect.options[difficultySelect.selectedIndex].text
-            };
-            let scores = JSON.parse(localStorage.getItem(key)) || [];
-            scores.push(entry);
-            scores.sort((a,b) => b.score - a.score);
-            scores = scores.slice(0, 10);
-            localStorage.setItem(key, JSON.stringify(scores));
-        }
-
-        function displayLeaderboard() {
-            let html = '';
-            const modes = ['pays', 'metropoles', 'mixte'];
-            const diffs = ['1000','700','300','100','50','10','1'];
-            diffs.forEach(diff => {
-                modes.forEach(mode => {
-                    const key = `geoquest_${mode}_${diff}`;
-                    const data = JSON.parse(localStorage.getItem(key)) || [];
-                    if (data.length > 0) {
-                        html += `<h3>${mode.toUpperCase()} · seuil ${diff} km</h3>`;
-                        html += `<table class="leaderboard-table"><tr><th>Score</th><th>Date</th></tr>`;
-                        data.slice(0,5).forEach(e => {
-                            html += `<tr><td>${e.score}</td><td>${e.date}</td></tr>`;
-                        });
-                        html += `</table><br>`;
-                    }
-                });
-            });
-            leaderboardContent.innerHTML = html || '<p>Aucun score enregistré. Joue pour apparaître ici !</p>';
-        }
-
-        // Initialisation
-        function init() {
-            initMap();
-
+        function bindEvents() {
             modeBtns.forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
-            difficultySelect.addEventListener('change', () => {
-                updateFrontierRestriction();
-                resetGame();
-            });
-            frontierCheck.addEventListener('change', () => {
-                if (frontierCheck.disabled) return;
-                if (frontierCheck.checked) {
-                    if (frontierLayer && !map.hasLayer(frontierLayer)) frontierLayer.addTo(map);
-                } else {
-                    if (frontierLayer) map.removeLayer(frontierLayer);
-                }
-            });
-            skipBtn.addEventListener('click', () => pickNewTarget());
-            nextBtn.addEventListener('click', () => pickNewTarget());
-
-            showLeaderboardBtn.addEventListener('click', () => {
-                displayLeaderboard();
-                modal.style.display = 'flex';
-            });
+            difficultySelect.addEventListener('change', () => resetGame());
+            skipBtn.addEventListener('click', () => { if(isGameActive) pickNewTarget(); });
+            nextBtn.addEventListener('click', () => { if(isGameActive) pickNewTarget(); });
+            newGameBtn.addEventListener('click', resetGame);
+            showLeaderboardBtn.addEventListener('click', () => { displayLeaderboard(); modal.style.display = 'flex'; });
             closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
             window.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
-
-            updateFrontierRestriction();
         }
 
-        init();
+        // Démarrage
+        initMap();
+        bindEvents();
+        loadCountries(); // charge les frontières puis lance pickNewTarget
     })();
 </script>
 </body>
