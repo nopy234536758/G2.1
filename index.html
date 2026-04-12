@@ -3,16 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>🌍 GeoQuest – Frontières Réelles (stable)</title>
+    <title>🌍 GeoQuest – Frontières Multi-Sources</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         :root {
             --bg: #0b1a20;
             --surface: #132c36;
@@ -23,7 +19,6 @@
             --red: #e74c3c;
             --gold: #f1c40f;
             --radius: 24px;
-            --shadow: 0 12px 28px rgba(0,0,0,0.6);
         }
         body {
             font-family: 'Segoe UI', system-ui, sans-serif;
@@ -40,17 +35,19 @@
             flex-direction: column;
             gap: 18px;
         }
+        .header, .stats-row, .game-panel {
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 14px 24px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.6);
+        }
         .header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
             gap: 15px;
-            background: var(--surface);
-            padding: 14px 24px;
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow);
         }
         .logo h1 {
             font-size: 26px;
@@ -103,10 +100,6 @@
             flex-wrap: wrap;
             gap: 15px;
             justify-content: space-between;
-            background: var(--surface);
-            border-radius: 60px;
-            padding: 12px 24px;
-            border: 1px solid var(--border);
         }
         .stat-card {
             display: flex;
@@ -116,10 +109,7 @@
             padding: 6px 20px;
             border-radius: 50px;
         }
-        .stat-value {
-            font-size: 28px;
-            font-weight: 800;
-        }
+        .stat-value { font-size: 28px; font-weight: 800; }
         .streak-fire { color: var(--gold); text-shadow: 0 0 5px orange; }
         .lives { color: var(--red); letter-spacing: 4px; }
         #map {
@@ -130,12 +120,6 @@
             border-radius: var(--radius);
             border: 2px solid var(--border);
         }
-        .game-panel {
-            background: var(--surface);
-            border-radius: var(--radius);
-            padding: 24px;
-            border: 1px solid var(--border);
-        }
         .target-box {
             background: linear-gradient(145deg, #1e4a5a, #0e2f3c);
             padding: 12px 32px;
@@ -144,12 +128,7 @@
             display: inline-block;
             margin-bottom: 20px;
         }
-        .target-label {
-            font-size: 36px;
-            font-weight: 800;
-            color: #f0f9ff;
-            text-shadow: 0 3px 0 #0b1a20;
-        }
+        .target-label { font-size: 36px; font-weight: 800; color: #f0f9ff; text-shadow: 0 3px 0 #0b1a20; }
         .feedback {
             padding: 18px 24px;
             border-radius: 60px;
@@ -212,13 +191,12 @@
         .user-marker { background: #3b5bdb; width: 24px !important; height: 24px !important; line-height: 22px; }
         .solution-star { background: gold; width: 32px !important; height: 32px !important; line-height: 30px; font-size: 24px; }
         .distance-tooltip { background: #0b1a20dd; border: none; color: white; font-weight: bold; padding: 4px 12px; border-radius: 20px; }
-        .loading { text-align: center; padding: 20px; background: #1c3e4a; border-radius: 20px; }
     </style>
 </head>
 <body>
 <div id="app">
     <div class="header">
-        <div class="logo"><h1>🗺️ GEOQUEST · FRONTIÈRES 100% FONCTIONNELLES</h1></div>
+        <div class="logo"><h1>🗺️ GEOQUEST · MULTI-SOURCES</h1></div>
         <div class="mode-switch">
             <button class="mode-btn active" data-mode="pays">🌍 Pays</button>
             <button class="mode-btn" data-mode="metropoles">🏙️ Métropoles</button>
@@ -251,7 +229,7 @@
 
     <div class="game-panel">
         <div class="target-box"><span class="target-label" id="targetName">---</span></div>
-        <div class="feedback" id="feedbackMessage">🌍 Chargement des frontières...</div>
+        <div class="feedback" id="feedbackMessage">🌍 Initialisation du jeu...</div>
         <div class="actions">
             <button class="btn" id="skipBtn">⏩ PASSER</button>
             <button class="btn btn-primary" id="nextBtn">▶️ SUIVANT</button>
@@ -280,7 +258,7 @@
             "Pologne", "Nigéria", "Turquie", "Arabie Saoudite", "Pakistan", "Vietnam",
             "Thaïlande", "Malaisie", "Philippines", "Indonésie"
         ];
-        // Correspondance français -> anglais pour le GeoJSON (basé sur le champ "ADMIN" du fichier countries.geo.json)
+        // Correspondance français -> anglais pour plusieurs sources (ADMIN ou name)
         const PAYS_MAP = {
             "Brésil": "Brazil", "Russie": "Russia", "Inde": "India", "Chine": "China",
             "Afrique du Sud": "South Africa", "Mexique": "Mexico", "Argentine": "Argentina",
@@ -320,7 +298,9 @@
         let correctAnswers = 0;
         let currentHighScore = 0;
 
-        let countryGeometries = new Map(); // nom anglais -> feature (polygone)
+        // Données géographiques
+        let countryGeometries = new Map(); // nom anglais -> feature geometry
+        let frontiersLoaded = false;
 
         // Éléments DOM
         const targetNameEl = document.getElementById('targetName');
@@ -340,6 +320,7 @@
         const closeModalBtn = document.getElementById('closeModalBtn');
         const leaderboardContent = document.getElementById('leaderboardContent');
 
+        // Helpers
         function getThreshold() { return parseFloat(difficultySelect.value); }
         function getBasePoints() {
             const t = getThreshold();
@@ -409,43 +390,91 @@
                 feedbackEl.innerHTML = `🎯 Où se trouve ${currentTarget.name} ? ${currentTarget.type === 'pays' ? '(Clique dans le pays)' : `(Seuil ${getThreshold()} km)`}`;
         }
 
-        // ---------- CHARGEMENT DES FRONTIÈRES (source fiable) ----------
-        async function loadCountries() {
-            feedbackEl.innerHTML = "⏳ Chargement des frontières (GeoJSON) depuis CDN...";
-            try {
-                // Utilisation du CDN jsDelivr (fiable et CORS-friendly)
-                const response = await fetch('https://cdn.jsdelivr.net/npm/world-geojson@1.0.0/countries.geo.json');
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const data = await response.json();
-                // Indexer par nom ADMIN
-                for (let feature of data.features) {
-                    const name = feature.properties.ADMIN; // "France", "Brazil", etc.
-                    countryGeometries.set(name, feature);
-                }
-                feedbackEl.innerHTML = "✅ Frontières chargées avec succès ! Prêt à jouer.";
-                setTimeout(() => refreshFeedback(), 1500);
-                pickNewTarget(); // première cible
-            } catch(e) {
-                console.error(e);
-                feedbackEl.innerHTML = "⚠️ ERREUR : impossible de charger les frontières. Vérifie ta connexion internet. Rafraîchis la page.";
-                // On peut quand même jouer en mode métropoles uniquement, mais pour les pays ce sera cassé.
-                // On désactive le mode pays si pas de géométries
-                if (countryGeometries.size === 0) {
-                    feedbackEl.innerHTML += " <br>▶️ Mode pays désactivé (frontières manquantes). Passe en mode Métropoles.";
+        // ---------- CHARGEMENT MULTI-SOURCES AVEC FALLBACK ----------
+        const GEOJSON_SOURCES = [
+            {
+                name: "jsDelivr (world-geojson)",
+                url: "https://cdn.jsdelivr.net/npm/world-geojson@1.0.0/countries.geo.json",
+                // Ce fichier a une propriété "ADMIN" pour le nom du pays
+                getName: (feature) => feature.properties.ADMIN
+            },
+            {
+                name: "OpenDataSoft",
+                url: "https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/world-administrative-boundaries/exports/geojson",
+                getName: (feature) => feature.properties.name
+            },
+            {
+                name: "GitHub raw (geojson-world)",
+                url: "https://raw.githubusercontent.com/Stefie/geojson-world/master/countries.geojson",
+                getName: (feature) => feature.properties.name
+            }
+        ];
+
+        async function loadGeoJSONWithFallback() {
+            for (let source of GEOJSON_SOURCES) {
+                try {
+                    feedbackEl.innerHTML = `⏳ Chargement des frontières depuis ${source.name}...`;
+                    const response = await fetch(source.url);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+                    
+                    // Vérifier que c'est un GeoJSON valide avec des features
+                    if (!data || !data.features || data.features.length === 0) {
+                        throw new Error("GeoJSON invalide ou vide");
+                    }
+                    
+                    // Indexer les géométries par nom de pays
+                    let count = 0;
+                    for (let feature of data.features) {
+                        let countryName = source.getName(feature);
+                        if (countryName && (countryName in PAYS_MAP || Object.values(PAYS_MAP).includes(countryName))) {
+                            // On stocke avec le nom anglais standardisé (celui de PAYS_MAP)
+                            let englishName = countryName;
+                            // Vérifier si ce nom correspond à un de nos pays
+                            const matchingFr = Object.keys(PAYS_MAP).find(fr => PAYS_MAP[fr] === englishName);
+                            if (matchingFr) {
+                                countryGeometries.set(englishName, feature.geometry);
+                                count++;
+                            }
+                        }
+                    }
+                    
+                    if (count > 0) {
+                        frontiersLoaded = true;
+                        feedbackEl.innerHTML = `✅ Frontières chargées (${count} pays) depuis ${source.name}. Prêt à jouer.`;
+                        setTimeout(() => refreshFeedback(), 1500);
+                        // Ajouter une couche visuelle des frontières sur la carte (optionnel)
+                        L.geoJSON(data, {
+                            style: { color: '#c9ae74', weight: 1.2, opacity: 0.6, fill: false },
+                            interactive: false
+                        }).addTo(map);
+                        return true;
+                    } else {
+                        throw new Error("Aucun pays correspondant trouvé");
+                    }
+                } catch (err) {
+                    console.warn(`Source ${source.name} échouée:`, err);
+                    feedbackEl.innerHTML = `⚠️ Source ${source.name} indisponible, tentative suivante...`;
                 }
             }
+            // Si on arrive ici, toutes les sources ont échoué
+            frontiersLoaded = false;
+            feedbackEl.innerHTML = "❌ Impossible de charger les frontières. Le mode Pays sera désactivé. Passe en mode Métropoles.";
+            return false;
         }
 
+        // Vérification si un point est dans un pays
         function isPointInCountry(lat, lng, paysFr) {
+            if (!frontiersLoaded) return false;
             const englishName = PAYS_MAP[paysFr];
             if (!englishName) return false;
-            const feature = countryGeometries.get(englishName);
-            if (!feature) return false;
+            const geometry = countryGeometries.get(englishName);
+            if (!geometry) return false;
             const point = turf.point([lng, lat]);
-            return turf.booleanPointInPolygon(point, feature.geometry);
+            return turf.booleanPointInPolygon(point, geometry);
         }
 
-        // ---------- CIBLES ----------
+        // ---------- MÉCANIQUE DE JEU ----------
         function pickNewTarget() {
             if (!isGameActive) return;
             // Nettoyer marqueurs
@@ -455,8 +484,8 @@
             
             let pool = [];
             if (currentMode === 'pays') {
-                if (countryGeometries.size === 0) {
-                    feedbackEl.innerHTML = "⚠️ Frontières non chargées, impossible de jouer en mode pays. Recharge la page ou passe en métropoles.";
+                if (!frontiersLoaded) {
+                    feedbackEl.innerHTML = "⚠️ Frontières non chargées, impossible de jouer en mode pays. Change de mode.";
                     return;
                 }
                 pool = PAYS_NOMS_FR.map(n => ({ type: 'pays', name: n }));
@@ -466,6 +495,12 @@
                 let paysItems = PAYS_NOMS_FR.map(n => ({ type: 'pays', name: n }));
                 let villesItems = METROPOLES.map(c => ({ type: 'ville', name: c.name, lat: c.lat, lng: c.lng }));
                 pool = [...paysItems, ...villesItems];
+                // Si frontières non chargées, on ne met que les villes
+                if (!frontiersLoaded) pool = villesItems;
+            }
+            if (pool.length === 0) {
+                feedbackEl.innerHTML = "Aucune cible disponible. Vérifie les données.";
+                return;
             }
             const rand = pool[Math.floor(Math.random() * pool.length)];
             if (rand.type === 'pays') {
@@ -479,7 +514,6 @@
             map.setView([20, 0], 2);
         }
 
-        // ---------- CLIC ----------
         function onMapClick(e) {
             if (!isGameActive) {
                 feedbackEl.innerHTML = "💀 Partie terminée. Nouvelle partie.";
@@ -497,7 +531,6 @@
             let details = "";
 
             if (currentTarget.type === 'pays') {
-                // Vérification par frontière
                 isCorrect = isPointInCountry(lat, lng, currentTarget.name);
                 details = isCorrect ? `✅ ${currentTarget.name} trouvé !` : `❌ ${currentTarget.name} n'est pas à cet endroit.`;
             } else {
@@ -507,7 +540,7 @@
                 details = isCorrect ? `✅ ${currentTarget.name} à ${Math.round(distance)} km` : `❌ ${currentTarget.name} est à ${Math.round(distance)} km (seuil ${getThreshold()} km)`;
             }
 
-            // Affichage marqueurs
+            // Affichage des marqueurs
             if (window.userMarker) map.removeLayer(window.userMarker);
             if (window.solutionMarker) map.removeLayer(window.solutionMarker);
             if (window.distanceLine) map.removeLayer(window.distanceLine);
@@ -522,7 +555,6 @@
                 window.distanceLine.bindTooltip(`${Math.round(distance)} km`, { permanent: true, direction: 'center', className: 'distance-tooltip' });
                 map.setView([currentTarget.lat, currentTarget.lng], Math.max(map.getZoom(), 4));
             } else {
-                // Pour un pays, on centre sur le clic
                 map.setView([lat, lng], map.getZoom());
             }
 
@@ -608,7 +640,18 @@
         // Démarrage
         initMap();
         bindEvents();
-        loadCountries(); // charge les frontières puis lance pickNewTarget
+        loadGeoJSONWithFallback().then(success => {
+            if (!success) {
+                // On force le mode métropoles si les frontières sont absentes
+                if (currentMode === 'pays') {
+                    currentMode = 'metropoles';
+                    document.querySelector('.mode-btn[data-mode="metropoles"]').classList.add('active');
+                    document.querySelector('.mode-btn[data-mode="pays"]').classList.remove('active');
+                    feedbackEl.innerHTML += " Passage automatique en mode Métropoles.";
+                }
+            }
+            resetGame(); // démarre la première cible
+        });
     })();
 </script>
 </body>
