@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>🌍 GeoQuest – Frontières Multi-Sources</title>
+    <title>🌍 GeoQuest – Tous pays affichés</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
@@ -196,7 +196,7 @@
 <body>
 <div id="app">
     <div class="header">
-        <div class="logo"><h1>🗺️ GEOQUEST · MULTI-SOURCES</h1></div>
+        <div class="logo"><h1>🗺️ GEOQUEST · TOUS PAYS AFFICHÉS</h1></div>
         <div class="mode-switch">
             <button class="mode-btn active" data-mode="pays">🌍 Pays</button>
             <button class="mode-btn" data-mode="metropoles">🏙️ Métropoles</button>
@@ -236,7 +236,7 @@
             <button class="btn" id="newGameBtn">🔄 NOUVELLE PARTIE</button>
         </div>
         <div class="legend-tip" style="font-size:13px; margin-top:12px; text-align:center;">
-            ⭐ Pays → clique n'importe où à l'intérieur de ses frontières.<br>
+            ⭐ Pays → survole pour voir la zone, clique pour valider.<br>
             📍 Métropole → clique à moins du seuil (distance au point).
         </div>
     </div>
@@ -252,13 +252,12 @@
 
 <script>
     (function(){
-        // ---------- LISTES DES CIBLES ----------
+        // ---------- DONNÉES ----------
         const PAYS_NOMS_FR = [
             "Brésil", "Russie", "Inde", "Chine", "Afrique du Sud", "Mexique", "Argentine",
             "Pologne", "Nigéria", "Turquie", "Arabie Saoudite", "Pakistan", "Vietnam",
             "Thaïlande", "Malaisie", "Philippines", "Indonésie"
         ];
-        // Correspondance français -> anglais pour plusieurs sources (ADMIN ou name)
         const PAYS_MAP = {
             "Brésil": "Brazil", "Russie": "Russia", "Inde": "India", "Chine": "China",
             "Afrique du Sud": "South Africa", "Mexique": "Mexico", "Argentine": "Argentina",
@@ -267,7 +266,18 @@
             "Thaïlande": "Thailand", "Malaisie": "Malaysia", "Philippines": "Philippines",
             "Indonésie": "Indonesia"
         };
-
+        const COUNTRY_ALIASES = {
+            "russian federation": "Russia",
+            "united states of america": "United States",
+            "united kingdom": "United Kingdom",
+            "south africa": "South Africa",
+            "saudi arabia": "Saudi Arabia",
+            "côte d'ivoire": "Ivory Coast",
+            "cote d'ivoire": "Ivory Coast",
+            "republic of south africa": "South Africa",
+            "federative republic of brazil": "Brazil",
+            "people's republic of china": "China"
+        };
         const METROPOLES = [
             { name: "New York", lat: 40.7128, lng: -74.0060 },
             { name: "Londres", lat: 51.5074, lng: -0.1278 },
@@ -297,10 +307,19 @@
         let lives = 3;
         let correctAnswers = 0;
         let currentHighScore = 0;
+        let alreadyKnown = [];
 
-        // Données géographiques
-        let countryGeometries = new Map(); // nom anglais -> feature geometry
+        // Couches pays (nom français -> layer) uniquement pour les pays jouables
+        let countryLayers = new Map();
+        // Toutes les couches pays (pour reset complet)
+        let allCountryLayers = [];
         let frontiersLoaded = false;
+
+        // Styles
+        const defaultStyle = { color: '#c9ae74', weight: 1.2, opacity: 0.7, fillOpacity: 0.05, fillColor: '#ffffff' };
+        const hoverStyle = { color: '#c9ae74', weight: 1.5, opacity: 0.9, fillOpacity: 0.3, fillColor: '#aaaaaa' };
+        const correctStyle = { color: '#2ecc71', weight: 2, opacity: 1, fillOpacity: 0.5, fillColor: '#2ecc71' };
+        const wrongStyle = { color: '#e74c3c', weight: 2, opacity: 1, fillOpacity: 0.5, fillColor: '#e74c3c' };
 
         // Éléments DOM
         const targetNameEl = document.getElementById('targetName');
@@ -341,7 +360,6 @@
             correctCountSpan.textContent = correctAnswers;
             highScoreDisplay.textContent = currentHighScore;
         }
-
         function loadHighScore() {
             const key = `hs_${currentMode}_${getThreshold()}`;
             currentHighScore = parseInt(localStorage.getItem(key)) || 0;
@@ -384,186 +402,73 @@
             }
             leaderboardContent.innerHTML = html || '<p>Aucun score. Joue pour entrer au Hall of Fame !</p>';
         }
-
         function refreshFeedback() {
             if(currentTarget)
-                feedbackEl.innerHTML = `🎯 Où se trouve ${currentTarget.name} ? ${currentTarget.type === 'pays' ? '(Clique dans le pays)' : `(Seuil ${getThreshold()} km)`}`;
+                feedbackEl.innerHTML = `🎯 Où se trouve ${currentTarget.name} ? ${currentTarget.type === 'pays' ? '(Clique sur le pays)' : `(Seuil ${getThreshold()} km)`}`;
         }
 
-        // ---------- CHARGEMENT MULTI-SOURCES AVEC FALLBACK ----------
-        const GEOJSON_SOURCES = [
-            {
-                name: "jsDelivr (world-geojson)",
-                url: "https://cdn.jsdelivr.net/npm/world-geojson@1.0.0/countries.geo.json",
-                // Ce fichier a une propriété "ADMIN" pour le nom du pays
-                getName: (feature) => feature.properties.ADMIN
-            },
-            {
-                name: "OpenDataSoft",
-                url: "https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/world-administrative-boundaries/exports/geojson",
-                getName: (feature) => feature.properties.name
-            },
-            {
-                name: "GitHub raw (geojson-world)",
-                url: "https://raw.githubusercontent.com/Stefie/geojson-world/master/countries.geojson",
-                getName: (feature) => feature.properties.name
+        // Vérifie si les interactions pays sont autorisées
+        function shouldEnableCountryInteraction() {
+            if (!isGameActive || !clickEnabled) return false;
+            if (currentMode === 'metropoles') return false;
+            if (currentMode === 'mixte' && currentTarget && currentTarget.type === 'ville') return false;
+            return true;
+        }
+
+        // Normalisation
+        function normalizeToStandardEnglish(rawName) {
+            if (!rawName) return null;
+            let normalized = rawName.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            if (COUNTRY_ALIASES[normalized]) return COUNTRY_ALIASES[normalized];
+            return normalized.replace(/\b\w/g, l => l.toUpperCase());
+        }
+        function findFrenchName(standardEnglish) {
+            for (let [fr, en] of Object.entries(PAYS_MAP)) {
+                if (en === standardEnglish) return fr;
             }
-        ];
-
-        async function loadGeoJSONWithFallback() {
-            for (let source of GEOJSON_SOURCES) {
-                try {
-                    feedbackEl.innerHTML = `⏳ Chargement des frontières depuis ${source.name}...`;
-                    const response = await fetch(source.url);
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    const data = await response.json();
-                    
-                    // Vérifier que c'est un GeoJSON valide avec des features
-                    if (!data || !data.features || data.features.length === 0) {
-                        throw new Error("GeoJSON invalide ou vide");
-                    }
-                    
-                    // Indexer les géométries par nom de pays
-                    let count = 0;
-                    for (let feature of data.features) {
-                        let countryName = source.getName(feature);
-                        if (countryName && (countryName in PAYS_MAP || Object.values(PAYS_MAP).includes(countryName))) {
-                            // On stocke avec le nom anglais standardisé (celui de PAYS_MAP)
-                            let englishName = countryName;
-                            // Vérifier si ce nom correspond à un de nos pays
-                            const matchingFr = Object.keys(PAYS_MAP).find(fr => PAYS_MAP[fr] === englishName);
-                            if (matchingFr) {
-                                countryGeometries.set(englishName, feature.geometry);
-                                count++;
-                            }
-                        }
-                    }
-                    
-                    if (count > 0) {
-                        frontiersLoaded = true;
-                        feedbackEl.innerHTML = `✅ Frontières chargées (${count} pays) depuis ${source.name}. Prêt à jouer.`;
-                        setTimeout(() => refreshFeedback(), 1500);
-                        // Ajouter une couche visuelle des frontières sur la carte (optionnel)
-                        L.geoJSON(data, {
-                            style: { color: '#c9ae74', weight: 1.2, opacity: 0.6, fill: false },
-                            interactive: false
-                        }).addTo(map);
-                        return true;
-                    } else {
-                        throw new Error("Aucun pays correspondant trouvé");
-                    }
-                } catch (err) {
-                    console.warn(`Source ${source.name} échouée:`, err);
-                    feedbackEl.innerHTML = `⚠️ Source ${source.name} indisponible, tentative suivante...`;
-                }
-            }
-            // Si on arrive ici, toutes les sources ont échoué
-            frontiersLoaded = false;
-            feedbackEl.innerHTML = "❌ Impossible de charger les frontières. Le mode Pays sera désactivé. Passe en mode Métropoles.";
-            return false;
+            return null;
         }
 
-        // Vérification si un point est dans un pays
-        function isPointInCountry(lat, lng, paysFr) {
-            if (!frontiersLoaded) return false;
-            const englishName = PAYS_MAP[paysFr];
-            if (!englishName) return false;
-            const geometry = countryGeometries.get(englishName);
-            if (!geometry) return false;
-            const point = turf.point([lng, lat]);
-            return turf.booleanPointInPolygon(point, geometry);
+        function resetAllCountryStyles() {
+            allCountryLayers.forEach(layer => layer.setStyle(defaultStyle));
         }
 
-        // ---------- MÉCANIQUE DE JEU ----------
-        function pickNewTarget() {
-            if (!isGameActive) return;
-            // Nettoyer marqueurs
-            if (window.userMarker) map.removeLayer(window.userMarker);
-            if (window.solutionMarker) map.removeLayer(window.solutionMarker);
-            if (window.distanceLine) map.removeLayer(window.distanceLine);
+        // Gestion du clic sur un pays (avec paramètre d'événement e)
+        function handleCountryClick(frenchNameOrNull, layer, e) {
+            L.DomEvent.stopPropagation(e);
             
-            let pool = [];
-            if (currentMode === 'pays') {
-                if (!frontiersLoaded) {
-                    feedbackEl.innerHTML = "⚠️ Frontières non chargées, impossible de jouer en mode pays. Change de mode.";
-                    return;
-                }
-                pool = PAYS_NOMS_FR.map(n => ({ type: 'pays', name: n }));
-            } else if (currentMode === 'metropoles') {
-                pool = METROPOLES.map(c => ({ type: 'ville', name: c.name, lat: c.lat, lng: c.lng }));
-            } else { // mixte
-                let paysItems = PAYS_NOMS_FR.map(n => ({ type: 'pays', name: n }));
-                let villesItems = METROPOLES.map(c => ({ type: 'ville', name: c.name, lat: c.lat, lng: c.lng }));
-                pool = [...paysItems, ...villesItems];
-                // Si frontières non chargées, on ne met que les villes
-                if (!frontiersLoaded) pool = villesItems;
-            }
-            if (pool.length === 0) {
-                feedbackEl.innerHTML = "Aucune cible disponible. Vérifie les données.";
-                return;
-            }
-            const rand = pool[Math.floor(Math.random() * pool.length)];
-            if (rand.type === 'pays') {
-                currentTarget = { type: 'pays', name: rand.name };
-            } else {
-                currentTarget = { type: 'ville', name: rand.name, lat: rand.lat, lng: rand.lng };
-            }
-            targetNameEl.textContent = currentTarget.name;
-            refreshFeedback();
-            clickEnabled = true;
-            map.setView([20, 0], 2);
-        }
+            if (!shouldEnableCountryInteraction()) return;
+            if (!currentTarget || currentTarget.type !== 'pays') return;
 
-        function onMapClick(e) {
-            if (!isGameActive) {
-                feedbackEl.innerHTML = "💀 Partie terminée. Nouvelle partie.";
-                return;
-            }
-            if (!clickEnabled) {
-                feedbackEl.innerHTML = "⏳ Utilise Suivant ou Passer pour continuer.";
-                return;
-            }
-            if (!currentTarget) { pickNewTarget(); return; }
+            resetAllCountryStyles();
 
-            const { lat, lng } = e.latlng;
-            let isCorrect = false;
-            let distance = null;
+            const isCorrect = (frenchNameOrNull === currentTarget.name);
             let details = "";
 
-            if (currentTarget.type === 'pays') {
-                isCorrect = isPointInCountry(lat, lng, currentTarget.name);
-                details = isCorrect ? `✅ ${currentTarget.name} trouvé !` : `❌ ${currentTarget.name} n'est pas à cet endroit.`;
+            if (isCorrect) {
+                layer.setStyle(correctStyle);
+                details = `✅ ${currentTarget.name} trouvé !`;
             } else {
-                const targetLat = currentTarget.lat, targetLng = currentTarget.lng;
-                distance = turf.distance(turf.point([lng, lat]), turf.point([targetLng, targetLat]), { units: 'kilometers' });
-                isCorrect = distance <= getThreshold();
-                details = isCorrect ? `✅ ${currentTarget.name} à ${Math.round(distance)} km` : `❌ ${currentTarget.name} est à ${Math.round(distance)} km (seuil ${getThreshold()} km)`;
-            }
-
-            // Affichage des marqueurs
-            if (window.userMarker) map.removeLayer(window.userMarker);
-            if (window.solutionMarker) map.removeLayer(window.solutionMarker);
-            if (window.distanceLine) map.removeLayer(window.distanceLine);
-
-            window.userMarker = L.marker([lat, lng], { icon: L.divIcon({ className: 'user-marker', html: '📍', iconSize: [24,24] }) }).addTo(map);
-            
-            if (currentTarget.type === 'ville') {
-                const starIcon = L.divIcon({ className: 'solution-star', html: '⭐', iconSize: [28,28] });
-                window.solutionMarker = L.marker([currentTarget.lat, currentTarget.lng], { icon: starIcon }).addTo(map);
-                const pts = [[lat, lng], [currentTarget.lat, currentTarget.lng]];
-                window.distanceLine = L.polyline(pts, { color: isCorrect ? '#2ecc71' : '#e74c3c', weight: 3, dashArray: isCorrect ? null : '8,6' }).addTo(map);
-                window.distanceLine.bindTooltip(`${Math.round(distance)} km`, { permanent: true, direction: 'center', className: 'distance-tooltip' });
-                map.setView([currentTarget.lat, currentTarget.lng], Math.max(map.getZoom(), 4));
-            } else {
-                map.setView([lat, lng], map.getZoom());
+                layer.setStyle(wrongStyle);
+                // Afficher le bon pays en vert (s'il est jouable)
+                const targetLayer = countryLayers.get(currentTarget.name);
+                if (targetLayer) {
+                    targetLayer.setStyle(correctStyle);
+                }
+                details = frenchNameOrNull 
+                    ? `❌ ${frenchNameOrNull} n'est pas ${currentTarget.name}.` 
+                    : `❌ Ce pays n'est pas ${currentTarget.name}.`;
             }
 
             clickEnabled = false;
 
             if (isCorrect) {
-                let base = (currentTarget.type === 'pays') ? 30 : getBasePoints();
+                let base = 30;
                 let multiplier = getStreakMultiplier();
                 let earned = Math.floor(base * multiplier);
+                if (!alreadyKnown.includes(currentTarget.name)) {
+                    alreadyKnown.push(currentTarget.name);
+                }
                 totalPoints += earned;
                 currentStreak++;
                 correctAnswers++;
@@ -586,29 +491,200 @@
                     feedbackEl.innerHTML = `💀 GAME OVER 💀 Score final : ${totalPoints} points | Réussites : ${correctAnswers}<br>Appuie sur "Nouvelle Partie".`;
                 }
             }
-            if (isCorrect) {
-                const streakSpan = document.getElementById('streakDisplay');
-                streakSpan.classList.add('combo-pop');
-                setTimeout(() => streakSpan.classList.remove('combo-pop'), 300);
-            }
         }
 
-        function resetGame() {
-            totalPoints = 0;
-            currentStreak = 0;
-            lives = 3;
-            correctAnswers = 0;
-            isGameActive = true;
-            clickEnabled = true;
-            updateUI();
-            loadHighScore();
-            pickNewTarget();
-            feedbackEl.className = 'feedback';
-            feedbackEl.innerHTML = "✨ Nouvelle partie ! Clique sur la carte. ✨";
+        // ---------- CHARGEMENT DE TOUS LES PAYS ----------
+        const GEOJSON_SOURCES = [
+            {
+                name: "jsDelivr",
+                url: "https://cdn.jsdelivr.net/npm/world-geojson@1.0.0/countries.geo.json",
+                getName: (f) => f.properties.ADMIN
+            },
+            {
+                name: "OpenDataSoft",
+                url: "https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/world-administrative-boundaries/exports/geojson",
+                getName: (f) => f.properties.name
+            },
+            {
+                name: "GitHub raw",
+                url: "https://raw.githubusercontent.com/Stefie/geojson-world/master/countries.geojson",
+                getName: (f) => f.properties.name
+            }
+        ];
+
+        async function loadAllCountries() {
+            // Nettoyer anciennes couches
+            allCountryLayers.forEach(l => map.removeLayer(l));
+            allCountryLayers = [];
+            countryLayers.clear();
+
+            for (let source of GEOJSON_SOURCES) {
+                try {
+                    feedbackEl.innerHTML = `⏳ Chargement des frontières (${source.name})...`;
+                    const response = await fetch(source.url);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+                    if (!data.features) throw new Error("Format invalide");
+
+                    let loadedCount = 0;
+                    for (let feature of data.features) {
+                        const rawName = source.getName(feature);
+                        const standardEnglish = normalizeToStandardEnglish(rawName);
+                        const frenchName = findFrenchName(standardEnglish);
+                        const isPlayable = (frenchName && PAYS_NOMS_FR.includes(frenchName));
+
+                        const layer = L.geoJSON(feature, {
+                            style: defaultStyle,
+                            interactive: true,
+                            onEachFeature: (f, l) => {
+                                l.on({
+                                    mouseover: (e) => {
+                                        if (!shouldEnableCountryInteraction()) return;
+                                        l.setStyle(hoverStyle);
+                                    },
+                                    mouseout: (e) => {
+                                        if (!shouldEnableCountryInteraction()) return;
+                                        l.setStyle(defaultStyle);
+                                    },
+                                    click: (e) => {
+                                        // Important : on passe bien l'événement e
+                                        if (!shouldEnableCountryInteraction()) return;
+                                        if (!clickEnabled) return;
+                                        handleCountryClick(frenchName || null, l, e);
+                                    }
+                                });
+                            }
+                        }).addTo(map);
+
+                        allCountryLayers.push(layer);
+                        if (isPlayable) {
+                            countryLayers.set(frenchName, layer);
+                        }
+                        loadedCount++;
+                    }
+                    if (loadedCount > 0) {
+                        frontiersLoaded = true;
+                        feedbackEl.innerHTML = `✅ ${loadedCount} pays affichés (${countryLayers.size} jouables) depuis ${source.name}.`;
+                        console.log(`✅ Pays jouables :`, Array.from(countryLayers.keys()));
+                        setTimeout(() => refreshFeedback(), 1500);
+                        return true;
+                    }
+                } catch (e) {
+                    console.warn(`Source ${source.name} échouée:`, e);
+                    feedbackEl.innerHTML = `⚠️ ${source.name} indisponible, tentative suivante...`;
+                }
+            }
+            frontiersLoaded = false;
+            feedbackEl.innerHTML = "❌ Aucune frontière chargée. Mode pays désactivé.";
+            return false;
+        }
+
+        // ---------- MÉTROPOLES (CLIC CARTE) ----------
+        function onMapClick(e) {
+            if (!isGameActive) return;
+            if (!clickEnabled) return;
+            if (!currentTarget) { pickNewTarget(); return; }
+            if (currentTarget.type === 'pays') return; // géré par les polygones
+
+            const { lat, lng } = e.latlng;
+            const targetLat = currentTarget.lat, targetLng = currentTarget.lng;
+            const distance = turf.distance(turf.point([lng, lat]), turf.point([targetLng, targetLat]), { units: 'kilometers' });
+            const isCorrect = distance <= getThreshold();
+            const details = isCorrect ? `✅ ${currentTarget.name} à ${Math.round(distance)} km` : `❌ ${currentTarget.name} est à ${Math.round(distance)} km (seuil ${getThreshold()} km)`;
+
             if (window.userMarker) map.removeLayer(window.userMarker);
             if (window.solutionMarker) map.removeLayer(window.solutionMarker);
             if (window.distanceLine) map.removeLayer(window.distanceLine);
-            window.userMarker = window.solutionMarker = window.distanceLine = null;
+
+            window.userMarker = L.marker([lat, lng], { icon: L.divIcon({ className: 'user-marker', html: '📍', iconSize: [24,24] }) }).addTo(map);
+            const starIcon = L.divIcon({ className: 'solution-star', html: '⭐', iconSize: [28,28] });
+            window.solutionMarker = L.marker([targetLat, targetLng], { icon: starIcon }).addTo(map);
+            const pts = [[lat, lng], [targetLat, targetLng]];
+            window.distanceLine = L.polyline(pts, { color: isCorrect ? '#2ecc71' : '#e74c3c', weight: 3, dashArray: isCorrect ? null : '8,6' }).addTo(map);
+            window.distanceLine.bindTooltip(`${Math.round(distance)} km`, { permanent: true, direction: 'center', className: 'distance-tooltip' });
+            map.setView([targetLat, targetLng], Math.max(map.getZoom(), 4));
+
+            clickEnabled = false;
+
+            if (isCorrect) {
+                let base = getBasePoints();
+                let multiplier = getStreakMultiplier();
+                let earned = Math.floor(base * multiplier);
+                if (!alreadyKnown.includes(currentTarget.name)) alreadyKnown.push(currentTarget.name);
+                totalPoints += earned;
+                currentStreak++;
+                correctAnswers++;
+                feedbackEl.className = 'feedback correct';
+                feedbackEl.innerHTML = `${details} +${earned} pts (x${multiplier.toFixed(1)}) 🔥 Combo ${currentStreak}`;
+                updateUI();
+                saveHighScore();
+            } else {
+                lives--;
+                currentStreak = 0;
+                feedbackEl.className = 'feedback wrong';
+                feedbackEl.innerHTML = `${details} ❌ Combo perdu ! ❤️ restantes : ${lives}`;
+                updateUI();
+                if (lives <= 0) {
+                    isGameActive = false;
+                    clickEnabled = false;
+                    saveLeaderboard();
+                    saveHighScore();
+                    feedbackEl.className = 'feedback gameover';
+                    feedbackEl.innerHTML = `💀 GAME OVER 💀 Score final : ${totalPoints} points | Réussites : ${correctAnswers}<br>Appuie sur "Nouvelle Partie".`;
+                }
+            }
+        }
+
+        // ---------- SÉLECTION DE CIBLE ----------
+        function pickNewTarget() {
+            if (!isGameActive) return;
+            if (window.userMarker) map.removeLayer(window.userMarker);
+            if (window.solutionMarker) map.removeLayer(window.solutionMarker);
+            if (window.distanceLine) map.removeLayer(window.distanceLine);
+            resetAllCountryStyles();
+
+            let pool = [];
+            if (currentMode === 'pays') {
+                if (!frontiersLoaded) {
+                    feedbackEl.innerHTML = "⚠️ Frontières non chargées.";
+                    return;
+                }
+                pool = PAYS_NOMS_FR.map(n => ({ type: 'pays', name: n })).filter(e => !alreadyKnown.includes(e.name));
+            } else if (currentMode === 'metropoles') {
+                pool = METROPOLES.map(c => ({ type: 'ville', name: c.name, lat: c.lat, lng: c.lng })).filter(e => !alreadyKnown.includes(e.name));
+            } else {
+                let paysItems = PAYS_NOMS_FR.map(n => ({ type: 'pays', name: n }));
+                let villesItems = METROPOLES.map(c => ({ type: 'ville', name: c.name, lat: c.lat, lng: c.lng }));
+                pool = [...paysItems, ...villesItems];
+                if (!frontiersLoaded) pool = villesItems;
+                pool = pool.filter(e => !alreadyKnown.includes(e.name));
+            }
+
+            if (pool.length === 0) {
+                feedbackEl.innerHTML = "🎉 FÉLICITATIONS ! Toutes les cibles trouvées !";
+                isGameActive = false;
+                saveLeaderboard();
+                return;
+            }
+
+            currentTarget = { ...pool[Math.floor(Math.random() * pool.length)] };
+            targetNameEl.textContent = currentTarget.name;
+            refreshFeedback();
+            clickEnabled = true;
+            map.setView([20, 0], 2);
+        }
+
+        function resetGame() {
+            totalPoints = 0; currentStreak = 0; lives = 3; alreadyKnown = []; correctAnswers = 0;
+            isGameActive = true; clickEnabled = true;
+            updateUI(); loadHighScore();
+            pickNewTarget();
+            feedbackEl.className = 'feedback';
+            feedbackEl.innerHTML = "✨ Nouvelle partie ! ✨";
+            if (window.userMarker) map.removeLayer(window.userMarker);
+            if (window.solutionMarker) map.removeLayer(window.solutionMarker);
+            if (window.distanceLine) map.removeLayer(window.distanceLine);
+            resetAllCountryStyles();
         }
 
         function setMode(mode) {
@@ -620,8 +696,7 @@
         function initMap() {
             map = L.map('map').setView([20, 0], 2);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; CartoDB',
-                subdomains: 'abcd'
+                attribution: '&copy; CartoDB', subdomains: 'abcd'
             }).addTo(map);
             map.on('click', onMapClick);
         }
@@ -640,17 +715,14 @@
         // Démarrage
         initMap();
         bindEvents();
-        loadGeoJSONWithFallback().then(success => {
-            if (!success) {
-                // On force le mode métropoles si les frontières sont absentes
-                if (currentMode === 'pays') {
-                    currentMode = 'metropoles';
-                    document.querySelector('.mode-btn[data-mode="metropoles"]').classList.add('active');
-                    document.querySelector('.mode-btn[data-mode="pays"]').classList.remove('active');
-                    feedbackEl.innerHTML += " Passage automatique en mode Métropoles.";
-                }
+        loadAllCountries().then(success => {
+            if (!success && currentMode === 'pays') {
+                currentMode = 'metropoles';
+                document.querySelector('.mode-btn[data-mode="metropoles"]').classList.add('active');
+                document.querySelector('.mode-btn[data-mode="pays"]').classList.remove('active');
+                feedbackEl.innerHTML += " Passage automatique en mode Métropoles.";
             }
-            resetGame(); // démarre la première cible
+            resetGame();
         });
     })();
 </script>
