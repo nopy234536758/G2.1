@@ -4,9 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>🌍 GeoQuest – Révision G2.1</title>
-    <!-- Leaflet -->
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- Turf.js -->
     <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
     <style>
@@ -45,8 +44,6 @@
             flex-direction: column;
             gap: 18px;
         }
-
-        /* Header gaming */
         .header {
             display: flex;
             align-items: center;
@@ -124,8 +121,6 @@
             align-items: center;
             gap: 6px;
         }
-
-        /* Carte */
         #map-container {
             border-radius: var(--radius);
             overflow: hidden;
@@ -138,8 +133,6 @@
             background: #9ec5d4;
             cursor: crosshair;
         }
-
-        /* Panneau de jeu */
         .game-panel {
             background: var(--surface);
             border-radius: var(--radius);
@@ -190,7 +183,6 @@
         }
         .score-good .score-value { color: var(--green); }
         .score-bad .score-value { color: var(--red); }
-
         .feedback {
             padding: 16px 22px;
             border-radius: 60px;
@@ -205,7 +197,6 @@
         }
         .feedback.correct { border-left-color: var(--green); background: #1e4a3e; }
         .feedback.wrong { border-left-color: var(--red); background: #5a2e2e; }
-
         .actions {
             display: flex;
             gap: 15px;
@@ -231,15 +222,12 @@
         }
         .btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
         .btn:active { transform: translateY(2px); box-shadow: none; }
-
         .leaderboard-btn {
             background: transparent;
             border: 2px dashed var(--muted);
             color: var(--muted);
             padding: 8px 18px;
         }
-
-        /* Leaderboard modal */
         .modal {
             display: none;
             position: fixed;
@@ -276,21 +264,44 @@
             font-weight: bold;
             cursor: pointer;
         }
-
         .legend-tip {
             font-size: 14px;
             color: var(--muted);
             display: flex;
             gap: 20px;
         }
-
-        /* Animation pulse */
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 0.9; }
-            100% { transform: scale(2); opacity: 0; }
+        .user-marker {
+            background: #3b5bdb;
+            border-radius: 50%;
+            width: 24px !important;
+            height: 24px !important;
+            border: 3px solid white;
+            box-shadow: 0 0 15px #3b5bdb;
+            font-size: 18px;
+            line-height: 22px;
+            text-align: center;
+            color: white;
         }
-        .pulse-marker {
-            animation: pulse 1.2s ease-out;
+        .solution-star {
+            background: #f1c40f;
+            border-radius: 50%;
+            width: 32px !important;
+            height: 32px !important;
+            border: 3px solid #2ecc71;
+            box-shadow: 0 0 20px gold;
+            font-size: 24px;
+            line-height: 30px;
+            text-align: center;
+        }
+        .distance-tooltip {
+            background: #0b1a20dd;
+            border: none;
+            color: white;
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+            box-shadow: 0 2px 8px black;
         }
     </style>
 </head>
@@ -417,19 +428,45 @@
             { nameFr: "Indonésie", nameEn: "Indonesia" }
         ];
 
+        // GeoJSON intégré pour les 17 pays (simplifié mais fonctionnel)
+        const EMBEDDED_GEOJSON = {
+            "type": "FeatureCollection",
+            "features": [
+                // Coordonnées simplifiées (bbox/polygone) pour chaque pays
+                // Afin de rester concis, je mets un polygone approximatif pour chacun.
+                // En production, on peut utiliser un fichier plus précis.
+                {"type":"Feature","properties":{"name":"Brazil"},"geometry":{"type":"Polygon","coordinates":[[[-74,-34],[-34,-34],[-34,5],[-74,5],[-74,-34]]]}},
+                {"type":"Feature","properties":{"name":"Russia"},"geometry":{"type":"Polygon","coordinates":[[[19,41],[169,41],[169,82],[19,82],[19,41]]]}},
+                {"type":"Feature","properties":{"name":"India"},"geometry":{"type":"Polygon","coordinates":[[[68,6],[97,6],[97,36],[68,36],[68,6]]]}},
+                {"type":"Feature","properties":{"name":"China"},"geometry":{"type":"Polygon","coordinates":[[[73,18],[135,18],[135,54],[73,54],[73,18]]]}},
+                {"type":"Feature","properties":{"name":"South Africa"},"geometry":{"type":"Polygon","coordinates":[[[16,-35],[33,-35],[33,-22],[16,-22],[16,-35]]]}},
+                {"type":"Feature","properties":{"name":"Mexico"},"geometry":{"type":"Polygon","coordinates":[[[-118,14],[-86,14],[-86,33],[-118,33],[-118,14]]]}},
+                {"type":"Feature","properties":{"name":"Argentina"},"geometry":{"type":"Polygon","coordinates":[[[-74,-55],[-53,-55],[-53,-21],[-74,-21],[-74,-55]]]}},
+                {"type":"Feature","properties":{"name":"Poland"},"geometry":{"type":"Polygon","coordinates":[[[14,49],[24,49],[24,55],[14,55],[14,49]]]}},
+                {"type":"Feature","properties":{"name":"Nigeria"},"geometry":{"type":"Polygon","coordinates":[[[2,4],[15,4],[15,14],[2,14],[2,4]]]}},
+                {"type":"Feature","properties":{"name":"Turkey"},"geometry":{"type":"Polygon","coordinates":[[[25,35],[45,35],[45,42],[25,42],[25,35]]]}},
+                {"type":"Feature","properties":{"name":"Saudi Arabia"},"geometry":{"type":"Polygon","coordinates":[[[34,16],[56,16],[56,32],[34,32],[34,16]]]}},
+                {"type":"Feature","properties":{"name":"Pakistan"},"geometry":{"type":"Polygon","coordinates":[[[60,23],[78,23],[78,37],[60,37],[60,23]]]}},
+                {"type":"Feature","properties":{"name":"Vietnam"},"geometry":{"type":"Polygon","coordinates":[[[102,8],[110,8],[110,24],[102,24],[102,8]]]}},
+                {"type":"Feature","properties":{"name":"Thailand"},"geometry":{"type":"Polygon","coordinates":[[[97,5],[106,5],[106,21],[97,21],[97,5]]]}},
+                {"type":"Feature","properties":{"name":"Malaysia"},"geometry":{"type":"Polygon","coordinates":[[[99,0],[120,0],[120,8],[99,8],[99,0]]]}},
+                {"type":"Feature","properties":{"name":"Philippines"},"geometry":{"type":"Polygon","coordinates":[[[116,4],[127,4],[127,21],[116,21],[116,4]]]}},
+                {"type":"Feature","properties":{"name":"Indonesia"},"geometry":{"type":"Polygon","coordinates":[[[94,-11],[141,-11],[141,6],[94,6],[94,-11]]]}}
+            ]
+        };
+
         // ---------- VARIABLES ----------
         let map;
         let frontierLayer;
-        let countriesGeoJson = null;
-        let currentMode = 'pays';       // 'pays', 'metropoles', 'mixte'
+        let countriesGeoJson = EMBEDDED_GEOJSON; // fallback intégré
+        let currentMode = 'pays';
         let currentTarget = null;
         let userMarker = null;
         let solutionLayer = null;
-        let distanceLine = null;        // Ligne entre clic et solution
+        let distanceLine = null;
         let clickEnabled = true;
         let scoreGood = 0;
         let scoreBad = 0;
-        let sessionScore = 0;           // pour le leaderboard (somme good)
 
         // Éléments DOM
         const targetNameEl = document.getElementById('targetName');
@@ -447,15 +484,13 @@
         const leaderboardContent = document.getElementById('leaderboardContent');
         const frontierWarning = document.getElementById('frontierWarning');
 
-        // Seuil de distance selon difficulté
-        function getThreshold() {
-            return parseFloat(difficultySelect.value);
-        }
+        // Seuil
+        function getThreshold() { return parseFloat(difficultySelect.value); }
 
-        // Mise à jour affichage frontières selon difficulté
+        // Gestion frontières selon difficulté
         function updateFrontierRestriction() {
             const threshold = getThreshold();
-            const hardModes = threshold <= 100; // Difficile et plus
+            const hardModes = threshold <= 100;
             if (hardModes) {
                 frontierCheck.checked = false;
                 frontierCheck.disabled = true;
@@ -464,7 +499,6 @@
             } else {
                 frontierCheck.disabled = false;
                 frontierWarning.textContent = '';
-                // respecter la checkbox
                 if (frontierCheck.checked && frontierLayer) {
                     if (!map.hasLayer(frontierLayer)) frontierLayer.addTo(map);
                 } else if (frontierLayer) {
@@ -489,30 +523,33 @@
                 maxZoom: 19
             }).addTo(map);
 
-            // Chargement GeoJSON
+            // Tenter de charger un GeoJSON plus précis depuis CDN
             fetch('https://cdn.jsdelivr.net/npm/world-geojson@1.0.0/countries.geo.json')
                 .then(res => res.json())
                 .then(data => {
-                    countriesGeoJson = data;
-                    frontierLayer = L.geoJSON(data, {
-                        style: { color: '#c9ae74', weight: 1.5, opacity: 0.8, fill: false },
-                        interactive: false
-                    });
-                    if (frontierCheck.checked && !frontierCheck.disabled) {
-                        frontierLayer.addTo(map);
-                    }
-                    // Si on attendait pour pick target
-                    if (!currentTarget) pickNewTarget();
+                    countriesGeoJson = data; // plus précis
+                    initFrontierLayer();
                 })
-                .catch(err => {
-                    console.warn("GeoJSON non chargé", err);
-                    feedbackEl.innerHTML = '⚠️ Données frontières indisponibles, mode Pays dégradé.';
+                .catch(() => {
+                    console.warn("Utilisation du GeoJSON intégré (fallback).");
+                    initFrontierLayer();
                 });
+
+            function initFrontierLayer() {
+                frontierLayer = L.geoJSON(countriesGeoJson, {
+                    style: { color: '#c9ae74', weight: 1.5, opacity: 0.8, fill: false },
+                    interactive: false
+                });
+                if (frontierCheck.checked && !frontierCheck.disabled) {
+                    frontierLayer.addTo(map);
+                }
+                if (!currentTarget) pickNewTarget();
+            }
 
             map.on('click', onMapClick);
         }
 
-        // Clic utilisateur
+        // Clic
         function onMapClick(e) {
             if (!clickEnabled) {
                 feedbackEl.innerHTML = '⏳ Valide ou passe à la suite.';
@@ -526,18 +563,15 @@
             let feedbackText = '';
             let distance = null;
 
-            // Marqueur utilisateur
             if (userMarker) map.removeLayer(userMarker);
             userMarker = L.marker([lat, lng], {
                 icon: L.divIcon({ className: 'user-marker', html: '📍', iconSize: [24,24] })
             }).addTo(map);
 
-            // Nettoyer anciens
             if (solutionLayer) map.removeLayer(solutionLayer);
             if (distanceLine) map.removeLayer(distanceLine);
 
             if (currentMode === 'pays' || (currentMode === 'mixte' && currentTarget.type === 'pays')) {
-                // Mode pays
                 const feature = currentTarget.countryFeature;
                 if (!feature) {
                     feedbackText = '❌ Pays non trouvé.';
@@ -552,33 +586,29 @@
                         feedbackText = `❌ Ce n'est pas ${currentTarget.name}.`;
                         scoreBad++;
                     }
-                    // Afficher le pays correct
                     solutionLayer = L.geoJSON(feature, {
                         style: { color: '#2ecc71', weight: 3, fillColor: '#2ecc71', fillOpacity: 0.25 }
                     }).addTo(map);
-                    map.fitBounds(solutionLayer.getBounds(), { padding: [30,30], maxZoom: 5 });
+                    try {
+                        map.fitBounds(solutionLayer.getBounds(), { padding: [30,30], maxZoom: 5 });
+                    } catch(e) {}
                 }
             } else {
-                // Mode métropole (ou mixte métropole)
                 const targetLat = currentTarget.lat;
                 const targetLng = currentTarget.lng;
                 distance = getDistanceKm(lat, lng, targetLat, targetLng);
                 isCorrect = distance <= threshold;
 
-                // Étoile solution
                 const starIcon = L.divIcon({ className: 'solution-star', html: '⭐', iconSize: [28,28] });
                 solutionLayer = L.marker([targetLat, targetLng], { icon: starIcon }).addTo(map);
                 solutionLayer.bindPopup(`${currentTarget.name}`).openPopup();
 
-                // Ligne + distance
                 const points = [[lat, lng], [targetLat, targetLng]];
                 distanceLine = L.polyline(points, {
                     color: isCorrect ? '#2ecc71' : '#e74c3c',
                     weight: 3,
-                    dashArray: isCorrect ? null : '8, 6',
-                    className: 'distance-line'
+                    dashArray: isCorrect ? null : '8, 6'
                 }).addTo(map);
-                // Tooltip avec distance
                 distanceLine.bindTooltip(`${Math.round(distance)} km`, { permanent: true, direction: 'center', className: 'distance-tooltip' });
 
                 if (isCorrect) {
@@ -591,13 +621,11 @@
                 map.setView([targetLat, targetLng], map.getZoom() > 4 ? map.getZoom() : 4);
             }
 
-            // Mise à jour UI
             feedbackEl.className = `feedback ${isCorrect ? 'correct' : 'wrong'}`;
             feedbackEl.innerHTML = feedbackText;
             updateScore();
             clickEnabled = false;
-
-            // Sauvegarde leaderboard potentielle en fin de session? On le fera plus tard.
+            saveScoreToLeaderboard();
         }
 
         function getDistanceKm(lat1, lon1, lat2, lon2) {
@@ -614,11 +642,10 @@
             if (distanceLine) map.removeLayer(distanceLine);
             userMarker = null; solutionLayer = null; distanceLine = null;
 
-            // Déterminer le type selon mode
             let pool = [];
             if (currentMode === 'pays') pool = PAYS_LIST.map(p => ({ ...p, type: 'pays' }));
             else if (currentMode === 'metropoles') pool = METROPOLES.map(m => ({ ...m, type: 'metropole' }));
-            else { // mixte
+            else {
                 pool = [
                     ...PAYS_LIST.map(p => ({ ...p, type: 'pays' })),
                     ...METROPOLES.map(m => ({ ...m, type: 'metropole' }))
@@ -661,7 +688,6 @@
             scoreBadEl.textContent = scoreBad;
         }
 
-        // Changement mode
         function setMode(mode) {
             currentMode = mode;
             modeBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
@@ -709,20 +735,16 @@
                     }
                 });
             });
-            if (html === '') html = '<p>Aucun score enregistré. Joue pour apparaître ici !</p>';
-            leaderboardContent.innerHTML = html;
+            leaderboardContent.innerHTML = html || '<p>Aucun score enregistré. Joue pour apparaître ici !</p>';
         }
 
-        // Événements
+        // Initialisation
         function init() {
             initMap();
-            pickNewTarget();
 
             modeBtns.forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
             difficultySelect.addEventListener('change', () => {
                 updateFrontierRestriction();
-                // Réinitialiser la partie en cours? On garde le score, mais on peut reset
-                // Pour éviter triche, on reset
                 resetGame();
             });
             frontierCheck.addEventListener('change', () => {
@@ -733,13 +755,9 @@
                     if (frontierLayer) map.removeLayer(frontierLayer);
                 }
             });
-            skipBtn.addEventListener('click', () => { pickNewTarget(); });
-            nextBtn.addEventListener('click', () => {
-                // Sauvegarder score avant nouvelle question ? Non on sauvegarde à la fin de session.
-                pickNewTarget();
-            });
+            skipBtn.addEventListener('click', () => pickNewTarget());
+            nextBtn.addEventListener('click', () => pickNewTarget());
 
-            // Leaderboard
             showLeaderboardBtn.addEventListener('click', () => {
                 displayLeaderboard();
                 modal.style.display = 'flex';
@@ -747,53 +765,6 @@
             closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
             window.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
 
-            // Sauvegarde automatique à chaque bonne réponse? On peut sauvegarder quand on quitte ou après chaque partie.
-            // Pour simplifier, on sauvegarde quand le score change (après validation)
-            const originalUpdate = updateScore;
-            updateScore = function() {
-                originalUpdate();
-                if (scoreGood > 0) saveScoreToLeaderboard();
-            };
-            updateScore();
-
-            // Styles additionnels
-            const style = document.createElement('style');
-            style.innerHTML = `
-                .user-marker {
-                    background: #3b5bdb;
-                    border-radius: 50%;
-                    width: 24px !important;
-                    height: 24px !important;
-                    border: 3px solid white;
-                    box-shadow: 0 0 15px #3b5bdb;
-                    font-size: 18px;
-                    line-height: 22px;
-                    text-align: center;
-                    color: white;
-                }
-                .solution-star {
-                    background: #f1c40f;
-                    border-radius: 50%;
-                    width: 32px !important;
-                    height: 32px !important;
-                    border: 3px solid #2ecc71;
-                    box-shadow: 0 0 20px gold;
-                    font-size: 24px;
-                    line-height: 30px;
-                    text-align: center;
-                }
-                .distance-tooltip {
-                    background: #0b1a20dd;
-                    border: none;
-                    color: white;
-                    font-weight: bold;
-                    padding: 4px 10px;
-                    border-radius: 20px;
-                    font-size: 14px;
-                    box-shadow: 0 2px 8px black;
-                }
-            `;
-            document.head.appendChild(style);
             updateFrontierRestriction();
         }
 
