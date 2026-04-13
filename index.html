@@ -3,261 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>🌍 GeoQuest – Tous pays affichés</title>
+    <title>🌍 GeoQuest – Apprendre & Arcade</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        :root {
-            --bg: #0b1a20;
-            --surface: #132c36;
-            --border: #2a4a58;
-            --text: #eaf2f5;
-            --accent: #4f9da6;
-            --green: #2ecc71;
-            --red: #e74c3c;
-            --gold: #f1c40f;
-            --radius: 24px;
-        }
-        body {
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            padding: 16px;
-            display: flex;
-            justify-content: center;
-        }
-        #app {
-            max-width: 1500px;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-        }
-        .header, .stats-row, .game-panel {
-            background: var(--surface);
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
-            padding: 14px 24px;
-            box-shadow: 0 12px 28px rgba(0,0,0,0.6);
-        }
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-        .logo h1 {
-            font-size: 26px;
-            background: linear-gradient(135deg, #f9e79f, #a8e6cf, #6ec4ce);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-        }
-        .mode-switch {
-            display: flex;
-            gap: 8px;
-            background: #1c3e4a;
-            padding: 6px;
-            border-radius: 60px;
-        }
-        .mode-btn {
-            padding: 8px 20px;
-            border-radius: 40px;
-            border: none;
-            background: transparent;
-            font-weight: 700;
-            cursor: pointer;
-            color: #9bb7c4;
-            transition: 0.2s;
-        }
-        .mode-btn.active {
-            background: var(--accent);
-            color: #0b1a20;
-            box-shadow: 0 0 12px #4f9da6aa;
-        }
-        .difficulty-selector {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: #1c3e4a;
-            padding: 6px 20px;
-            border-radius: 60px;
-        }
-        select {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 8px 16px;
-            border-radius: 40px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-        .stats-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            justify-content: space-between;
-        }
-        .stat-card {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: #0d262f;
-            padding: 6px 20px;
-            border-radius: 50px;
-        }
+        :root { --bg: #0b1a20; --surface: #132c36; --border: #2a4a58; --text: #eaf2f5; --accent: #4f9da6; --green: #2ecc71; --red: #e74c3c; --gold: #f1c40f; --radius: 24px; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); padding: 16px; display: flex; justify-content: center; }
+        #app { max-width: 1500px; width: 100%; display: flex; flex-direction: column; gap: 18px; }
+        .header, .stats-row, .game-panel { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 14px 24px; box-shadow: 0 12px 28px rgba(0,0,0,0.6); }
+        .header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; }
+        .logo h1 { font-size: 26px; background: linear-gradient(135deg, #f9e79f, #a8e6cf, #6ec4ce); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .controls { display: flex; gap: 15px; flex-wrap: wrap; align-items: center; }
+        .mode-switch, .type-switch { display: flex; gap: 8px; background: #1c3e4a; padding: 6px; border-radius: 60px; }
+        .mode-btn, .type-btn { padding: 8px 20px; border-radius: 40px; border: none; background: transparent; font-weight: 700; cursor: pointer; color: #9bb7c4; transition: 0.2s; }
+        .mode-btn.active, .type-btn.active { background: var(--accent); color: #0b1a20; box-shadow: 0 0 12px #4f9da6aa; }
+        .difficulty-selector { display: flex; align-items: center; gap: 12px; background: #1c3e4a; padding: 6px 20px; border-radius: 60px; }
+        select { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: 40px; font-weight: 600; cursor: pointer; }
+        .timer-box { background: #1c3e4a; padding: 8px 24px; border-radius: 60px; font-size: 24px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+        .skip-box { display: flex; align-items: center; gap: 12px; }
+        .stats-row { display: flex; flex-wrap: wrap; gap: 15px; justify-content: space-between; }
+        .stat-card { display: flex; align-items: center; gap: 12px; background: #0d262f; padding: 6px 20px; border-radius: 50px; }
         .stat-value { font-size: 28px; font-weight: 800; }
         .streak-fire { color: var(--gold); text-shadow: 0 0 5px orange; }
         .lives { color: var(--red); letter-spacing: 4px; }
-        #map {
-            height: 500px;
-            width: 100%;
-            background: #9ec5d4;
-            cursor: crosshair;
-            border-radius: var(--radius);
-            border: 2px solid var(--border);
-        }
-        .target-box {
-            background: linear-gradient(145deg, #1e4a5a, #0e2f3c);
-            padding: 12px 32px;
-            border-radius: 80px;
-            border: 2px solid var(--accent);
-            display: inline-block;
-            margin-bottom: 20px;
-        }
+        #map { height: 500px; width: 100%; background: #9ec5d4; cursor: crosshair; border-radius: var(--radius); border: 2px solid var(--border); }
+        .target-box { background: linear-gradient(145deg, #1e4a5a, #0e2f3c); padding: 12px 32px; border-radius: 80px; border: 2px solid var(--accent); display: inline-block; margin-bottom: 20px; }
         .target-label { font-size: 36px; font-weight: 800; color: #f0f9ff; text-shadow: 0 3px 0 #0b1a20; }
-        .feedback {
-            padding: 18px 24px;
-            border-radius: 60px;
-            font-size: 18px;
-            font-weight: 600;
-            background: #1b3f4d;
-            border-left: 8px solid var(--accent);
-            margin: 20px 0;
-        }
+        .feedback { padding: 18px 24px; border-radius: 60px; font-size: 18px; font-weight: 600; background: #1b3f4d; border-left: 8px solid var(--accent); margin: 20px 0; }
         .feedback.correct { border-left-color: var(--green); background: #1e4a3e; }
         .feedback.wrong { border-left-color: var(--red); background: #5a2e2e; }
-        .btn {
-            padding: 12px 28px;
-            border-radius: 60px;
-            border: none;
-            font-weight: 800;
-            font-size: 16px;
-            cursor: pointer;
-            background: #2c5e6e;
-            color: white;
-            border-bottom: 4px solid #14323e;
-            margin: 5px;
-        }
+        .btn { padding: 12px 28px; border-radius: 60px; border: none; font-weight: 800; font-size: 16px; cursor: pointer; background: #2c5e6e; color: white; border-bottom: 4px solid #14323e; margin: 5px; }
         .btn-primary { background: var(--accent); border-bottom-color: #2a6b75; color: #0b1a20; }
         .btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: #000000cc;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-        }
-        .modal-content {
-            background: var(--surface);
-            border-radius: 32px;
-            padding: 32px;
-            max-width: 700px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-            border: 2px solid var(--accent);
-        }
-        .leaderboard-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .leaderboard-table th, .leaderboard-table td {
-            padding: 10px 8px;
-            text-align: left;
-            border-bottom: 1px solid var(--border);
-        }
-        .user-marker, .solution-star {
-            border-radius: 50%;
-            border: 3px solid white;
-            text-align: center;
-        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000000cc; align-items: center; justify-content: center; z-index: 9999; }
+        .modal-content { background: var(--surface); border-radius: 32px; padding: 32px; max-width: 700px; width: 90%; max-height: 80vh; overflow-y: auto; border: 2px solid var(--accent); }
+        .leaderboard-table { width: 100%; border-collapse: collapse; }
+        .leaderboard-table th, .leaderboard-table td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+        .user-marker, .solution-star { border-radius: 50%; border: 3px solid white; text-align: center; }
         .user-marker { background: #3b5bdb; width: 24px !important; height: 24px !important; line-height: 22px; }
         .solution-star { background: gold; width: 32px !important; height: 32px !important; line-height: 30px; font-size: 24px; }
         .distance-tooltip { background: #0b1a20dd; border: none; color: white; font-weight: bold; padding: 4px 12px; border-radius: 20px; }
+        .end-screen { text-align: center; }
+        .end-screen p { font-size: 24px; margin: 20px 0; }
     </style>
 </head>
 <body>
 <div id="app">
     <div class="header">
-        <div class="logo"><h1>🗺️ GEOQUEST · TOUS PAYS AFFICHÉS</h1></div>
-        <div class="mode-switch">
-            <button class="mode-btn active" data-mode="pays">🌍 Pays</button>
-            <button class="mode-btn" data-mode="metropoles">🏙️ Métropoles</button>
-            <button class="mode-btn" data-mode="mixte">🔀 Mixte</button>
+        <div class="logo"><h1>🗺️ GEOQUEST · APPRENDRE & ARCADE</h1></div>
+        <div class="controls">
+            <div class="mode-switch">
+                <button class="mode-btn active" data-mode="learn">📚 Apprendre</button>
+                <button class="mode-btn" data-mode="arcade">🕹️ Arcade</button>
+            </div>
+            <div class="type-switch">
+                <button class="type-btn active" data-type="pays">🌍 Pays</button>
+                <button class="type-btn" data-type="metropoles">🏙️ Métropoles</button>
+                <button class="type-btn" data-type="mixte">🔀 Mixte</button>
+            </div>
+            <div class="difficulty-selector">
+                <label>🎚️ Seuil</label>
+                <select id="difficultySelect">
+                    <option value="1000">Débutant (1000 km)</option>
+                    <option value="700" selected>Facile (700 km)</option>
+                    <option value="300">Normal (300 km)</option>
+                    <option value="100">Difficile (100 km)</option>
+                    <option value="50">Expert (50 km)</option>
+                    <option value="10">Hardcore (10 km)</option>
+                    <option value="1">Impossible (1 km)</option>
+                </select>
+            </div>
+            <div class="timer-box" id="timerDisplay" style="display: none;">⏱️ 01:00</div>
+            <div class="skip-box" id="skipContainer" style="display: none;">
+                <button class="btn" id="skipBtn" disabled>⏩ Skip (<span id="skipCount">3</span>)</button>
+            </div>
+            <button class="btn" id="newGameBtn">🔄 Nouvelle partie</button>
+            <button class="btn" id="stopLearnBtn" style="display: none;">⏹️ Arrêter</button>
+            <button class="btn" id="hallOfFameBtn">🏆 Hall of Fame</button>
         </div>
-        <div class="difficulty-selector">
-            <label>🎚️ DIFFICULTÉ</label>
-            <select id="difficultySelect">
-                <option value="1000">Débutant (1000 km)</option>
-                <option value="700">Facile (700 km)</option>
-                <option value="300" selected>Normal (300 km)</option>
-                <option value="100">Difficile (100 km)</option>
-                <option value="50">Expert (50 km)</option>
-                <option value="10">Hardcore (10 km)</option>
-                <option value="1">Impossible (1 km)</option>
-            </select>
-        </div>
-        <button class="btn" id="showLeaderboardBtn">🏆 CLASSEMENT</button>
     </div>
 
     <div class="stats-row">
         <div class="stat-card"><span>⭐</span><div><span class="stat-value" id="pointsDisplay">0</span><span> PTS</span></div></div>
         <div class="stat-card"><span>🔥</span><div><span class="stat-value streak-fire" id="streakDisplay">0</span><span> COMBO</span></div></div>
         <div class="stat-card"><span>❤️</span><div><span class="stat-value lives" id="livesDisplay">3</span><span> VIES</span></div></div>
-        <div class="stat-card"><span>🏅</span><div><span class="stat-value" id="highScoreDisplay">0</span><span> RECORD</span></div></div>
         <div class="stat-card"><span>✅</span><div><span class="stat-value" id="correctCountDisplay">0</span><span> RÉUSSITES</span></div></div>
+        <div class="stat-card"><span>📊</span><div><span class="stat-value" id="progressDisplay">0</span></div></div>
     </div>
 
     <div id="map"></div>
 
     <div class="game-panel">
         <div class="target-box"><span class="target-label" id="targetName">---</span></div>
-        <div class="feedback" id="feedbackMessage">🌍 Initialisation du jeu...</div>
-        <div class="actions">
-            <button class="btn" id="skipBtn">⏩ PASSER</button>
-            <button class="btn btn-primary" id="nextBtn">▶️ SUIVANT</button>
-            <button class="btn" id="newGameBtn">🔄 NOUVELLE PARTIE</button>
-        </div>
+        <div class="feedback" id="feedbackMessage">🌍 Prêt à jouer !</div>
+        <div class="actions" style="display: flex; justify-content: center;"></div>
         <div class="legend-tip" style="font-size:13px; margin-top:12px; text-align:center;">
-            ⭐ Pays → survole pour voir la zone, clique pour valider.<br>
-            📍 Métropole → clique à moins du seuil (distance au point).
+            ⭐ Pays → clique sur le pays. 📍 Métropole → clique sur la carte.
         </div>
     </div>
 </div>
 
-<div class="modal" id="leaderboardModal">
+<!-- Modal fin de partie / résultats -->
+<div class="modal" id="resultModal">
+    <div class="modal-content end-screen">
+        <h2 id="resultTitle">Session terminée</h2>
+        <div id="resultDetails"></div>
+        <button class="btn btn-primary" id="retryMistakesBtn" style="display: none;">🔁 Rejouer les erreurs</button>
+        <button class="btn" id="closeResultModalBtn">Fermer</button>
+    </div>
+</div>
+
+<!-- Modal Hall of Fame -->
+<div class="modal" id="hallOfFameModal">
     <div class="modal-content">
-        <h2>🏆 HALL OF FAME</h2>
-        <div id="leaderboardContent">Chargement...</div>
-        <button class="close-btn" id="closeModalBtn">Fermer</button>
+        <h2>🏆 HALL OF FAME (Arcade)</h2>
+        <div id="hallOfFameContent">Chargement...</div>
+        <button class="close-btn" id="closeHallOfFameBtn">Fermer</button>
     </div>
 </div>
 
 <script>
     (function(){
-        // ---------- DONNÉES ----------
-        const PAYS_NOMS_FR = [
+        // ---------- LISTES OFFICIELLES ----------
+        const PAYS_LIST = [
             "Brésil", "Russie", "Inde", "Chine", "Afrique du Sud", "Mexique", "Argentine",
             "Pologne", "Nigéria", "Turquie", "Arabie Saoudite", "Pakistan", "Vietnam",
             "Thaïlande", "Malaisie", "Philippines", "Indonésie"
         ];
+        const METROPOLES_LIST = [
+            "New York", "Londres", "Paris", "Shanghaï", "Tokyo", "Dubaï", "Beijing", "Sydney",
+            "Hong-Kong", "Singapour", "Los Angeles", "Chicago", "Séoul", "Moscou", "Sao Paulo",
+            "Milan", "Mexico", "Mumbaï", "Jakarta"
+        ];
+        const METROPOLES_COORDS = {
+            "New York": { lat: 40.7128, lng: -74.0060 }, "Londres": { lat: 51.5074, lng: -0.1278 },
+            "Paris": { lat: 48.8566, lng: 2.3522 }, "Shanghaï": { lat: 31.2304, lng: 121.4737 },
+            "Tokyo": { lat: 35.6895, lng: 139.6917 }, "Dubaï": { lat: 25.2048, lng: 55.2708 },
+            "Beijing": { lat: 39.9042, lng: 116.4074 }, "Sydney": { lat: -33.8688, lng: 151.2093 },
+            "Hong-Kong": { lat: 22.3193, lng: 114.1694 }, "Singapour": { lat: 1.3521, lng: 103.8198 },
+            "Los Angeles": { lat: 34.0522, lng: -118.2437 }, "Chicago": { lat: 41.8781, lng: -87.6298 },
+            "Séoul": { lat: 37.5665, lng: 126.9780 }, "Moscou": { lat: 55.7558, lng: 37.6173 },
+            "Sao Paulo": { lat: -23.5505, lng: -46.6333 }, "Milan": { lat: 45.4642, lng: 9.1900 },
+            "Mexico": { lat: 19.4326, lng: -99.1332 }, "Mumbaï": { lat: 19.0760, lng: 72.8777 },
+            "Jakarta": { lat: -6.2088, lng: 106.8456 }
+        };
+
         const PAYS_MAP = {
             "Brésil": "Brazil", "Russie": "Russia", "Inde": "India", "Chine": "China",
             "Afrique du Sud": "South Africa", "Mexique": "Mexico", "Argentine": "Argentina",
@@ -267,51 +160,36 @@
             "Indonésie": "Indonesia"
         };
         const COUNTRY_ALIASES = {
-            "russian federation": "Russia",
-            "united states of america": "United States",
-            "united kingdom": "United Kingdom",
-            "south africa": "South Africa",
-            "saudi arabia": "Saudi Arabia",
-            "côte d'ivoire": "Ivory Coast",
-            "cote d'ivoire": "Ivory Coast",
-            "republic of south africa": "South Africa",
-            "federative republic of brazil": "Brazil",
-            "people's republic of china": "China"
+            "russian federation": "Russia", "united states": "United States", "united kingdom": "United Kingdom",
+            "south africa": "South Africa", "saudi arabia": "Saudi Arabia", "côte d'ivoire": "Ivory Coast",
+            "cote d'ivoire": "Ivory Coast", "republic of south africa": "South Africa",
+            "federative republic of brazil": "Brazil", "people's republic of china": "China"
         };
-        const METROPOLES = [
-            { name: "New York", lat: 40.7128, lng: -74.0060 },
-            { name: "Londres", lat: 51.5074, lng: -0.1278 },
-            { name: "Paris", lat: 48.8566, lng: 2.3522 },
-            { name: "Shanghaï", lat: 31.2304, lng: 121.4737 },
-            { name: "Tokyo", lat: 35.6895, lng: 139.6917 },
-            { name: "Dubaï", lat: 25.2048, lng: 55.2708 },
-            { name: "Sydney", lat: -33.8688, lng: 151.2093 },
-            { name: "Hong-Kong", lat: 22.3193, lng: 114.1694 },
-            { name: "Singapour", lat: 1.3521, lng: 103.8198 },
-            { name: "Los Angeles", lat: 34.0522, lng: -118.2437 },
-            { name: "Séoul", lat: 37.5665, lng: 126.9780 },
-            { name: "Sao Paulo", lat: -23.5505, lng: -46.6333 },
-            { name: "Milan", lat: 45.4642, lng: 9.1900 },
-            { name: "Mumbaï", lat: 19.0760, lng: 72.8777 },
-            { name: "Jakarta", lat: -6.2088, lng: 106.8456 }
-        ];
 
-        // ---------- ÉTAT JEU ----------
+        // ---------- ÉTAT GLOBAL ----------
         let map;
-        let currentMode = 'pays';
+        let currentGameMode = 'learn';      // 'learn' ou 'arcade'
+        let currentTargetType = 'pays';
         let currentTarget = null;
-        let clickEnabled = true;
-        let isGameActive = true;
+        let clickEnabled = false;
+        let isGameActive = false;
         let totalPoints = 0;
         let currentStreak = 0;
         let lives = 3;
         let correctAnswers = 0;
-        let currentHighScore = 0;
-        let alreadyKnown = [];
+        let totalAttempts = 0;
+        let mistakes = [];                  // pour le mode apprendre : stocke les cibles ratées
+        let sessionMistakes = [];           // pour la session en cours
+        let lastTargetName = null;
 
-        // Couches pays (nom français -> layer) uniquement pour les pays jouables
+        // Arcade
+        let timeLeft = 60;
+        let timerInterval = null;
+        let skipsRemaining = 0;
+        const MAX_SKIPS = 3;
+
+        // Pays (couches)
         let countryLayers = new Map();
-        // Toutes les couches pays (pour reset complet)
         let allCountryLayers = [];
         let frontiersLoaded = false;
 
@@ -321,34 +199,39 @@
         const correctStyle = { color: '#2ecc71', weight: 2, opacity: 1, fillOpacity: 0.5, fillColor: '#2ecc71' };
         const wrongStyle = { color: '#e74c3c', weight: 2, opacity: 1, fillOpacity: 0.5, fillColor: '#e74c3c' };
 
-        // Éléments DOM
+        // DOM
         const targetNameEl = document.getElementById('targetName');
         const pointsDisplay = document.getElementById('pointsDisplay');
         const streakDisplay = document.getElementById('streakDisplay');
         const livesDisplay = document.getElementById('livesDisplay');
-        const highScoreDisplay = document.getElementById('highScoreDisplay');
         const correctCountSpan = document.getElementById('correctCountDisplay');
+        const progressDisplay = document.getElementById('progressDisplay');
         const feedbackEl = document.getElementById('feedbackMessage');
-        const modeBtns = document.querySelectorAll('.mode-btn');
-        const difficultySelect = document.getElementById('difficultySelect');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const skipContainer = document.getElementById('skipContainer');
         const skipBtn = document.getElementById('skipBtn');
-        const nextBtn = document.getElementById('nextBtn');
+        const skipCountSpan = document.getElementById('skipCount');
         const newGameBtn = document.getElementById('newGameBtn');
-        const showLeaderboardBtn = document.getElementById('showLeaderboardBtn');
-        const modal = document.getElementById('leaderboardModal');
-        const closeModalBtn = document.getElementById('closeModalBtn');
-        const leaderboardContent = document.getElementById('leaderboardContent');
+        const stopLearnBtn = document.getElementById('stopLearnBtn');
+        const hallOfFameBtn = document.getElementById('hallOfFameBtn');
+        const modeBtns = document.querySelectorAll('.mode-btn');
+        const typeBtns = document.querySelectorAll('.type-btn');
+        const difficultySelect = document.getElementById('difficultySelect');
+        const resultModal = document.getElementById('resultModal');
+        const resultTitle = document.getElementById('resultTitle');
+        const resultDetails = document.getElementById('resultDetails');
+        const retryMistakesBtn = document.getElementById('retryMistakesBtn');
+        const closeResultModalBtn = document.getElementById('closeResultModalBtn');
+        const hallOfFameModal = document.getElementById('hallOfFameModal');
+        const hallOfFameContent = document.getElementById('hallOfFameContent');
+        const closeHallOfFameBtn = document.getElementById('closeHallOfFameBtn');
 
         // Helpers
         function getThreshold() { return parseFloat(difficultySelect.value); }
         function getBasePoints() {
             const t = getThreshold();
-            if (t >= 1000) return 10;
-            if (t >= 700) return 15;
-            if (t >= 300) return 25;
-            if (t >= 100) return 50;
-            if (t >= 50) return 85;
-            if (t >= 10) return 160;
+            if (t >= 1000) return 10; if (t >= 700) return 15; if (t >= 300) return 25;
+            if (t >= 100) return 50; if (t >= 50) return 85; if (t >= 10) return 160;
             return 350;
         }
         function getStreakMultiplier() { return Math.min(1 + currentStreak * 0.12, 3.0); }
@@ -356,66 +239,53 @@
         function updateUI() {
             pointsDisplay.textContent = totalPoints;
             streakDisplay.textContent = currentStreak;
-            livesDisplay.textContent = '❤️'.repeat(lives) + '🖤'.repeat(3 - lives);
+            if (currentGameMode === 'learn') {
+                livesDisplay.textContent = '∞';
+            } else {
+                livesDisplay.textContent = '❤️'.repeat(lives) + '🖤'.repeat(3 - lives);
+            }
             correctCountSpan.textContent = correctAnswers;
-            highScoreDisplay.textContent = currentHighScore;
-        }
-        function loadHighScore() {
-            const key = `hs_${currentMode}_${getThreshold()}`;
-            currentHighScore = parseInt(localStorage.getItem(key)) || 0;
-            highScoreDisplay.textContent = currentHighScore;
-        }
-        function saveHighScore() {
-            if (totalPoints > currentHighScore) {
-                currentHighScore = totalPoints;
-                localStorage.setItem(`hs_${currentMode}_${getThreshold()}`, currentHighScore);
-                highScoreDisplay.textContent = currentHighScore;
-                feedbackEl.innerHTML = `🏆 NOUVEAU RECORD ! ${totalPoints} points ! 🏆`;
-                setTimeout(() => { if(isGameActive && currentTarget) refreshFeedback(); }, 2000);
+            if (currentGameMode === 'learn') {
+                progressDisplay.textContent = `${correctAnswers}/${totalAttempts}`;
+            } else {
+                progressDisplay.textContent = correctAnswers;
             }
-        }
-        function saveLeaderboard() {
-            if (totalPoints === 0) return;
-            const key = `lb_${currentMode}_${getThreshold()}`;
-            let scores = JSON.parse(localStorage.getItem(key)) || [];
-            scores.push({ points: totalPoints, date: new Date().toLocaleDateString(), correct: correctAnswers });
-            scores.sort((a,b) => b.points - a.points);
-            scores = scores.slice(0, 10);
-            localStorage.setItem(key, JSON.stringify(scores));
-        }
-        function displayLeaderboard() {
-            let html = '';
-            const modes = ['pays', 'metropoles', 'mixte'];
-            const diffs = ['1000','700','300','100','50','10','1'];
-            for (let diff of diffs) {
-                for (let mode of modes) {
-                    const key = `lb_${mode}_${diff}`;
-                    const data = JSON.parse(localStorage.getItem(key)) || [];
-                    if (data.length) {
-                        html += `<h3>${mode.toUpperCase()} · seuil ${diff} km</h3><table class="leaderboard-table"><tr><th>Score</th><th>Réussites</th><th>Date</th></tr>`;
-                        data.slice(0,5).forEach(e => {
-                            html += `<tr><td>${e.points}</td><td>${e.correct}</td><td>${e.date}</td></tr>`;
-                        });
-                        html += `</table><br>`;
-                    }
-                }
-            }
-            leaderboardContent.innerHTML = html || '<p>Aucun score. Joue pour entrer au Hall of Fame !</p>';
-        }
-        function refreshFeedback() {
-            if(currentTarget)
-                feedbackEl.innerHTML = `🎯 Où se trouve ${currentTarget.name} ? ${currentTarget.type === 'pays' ? '(Clique sur le pays)' : `(Seuil ${getThreshold()} km)`}`;
         }
 
-        // Vérifie si les interactions pays sont autorisées
+        function stopTimer() { if (timerInterval) clearInterval(timerInterval); timerInterval = null; }
+        function startArcadeTimer() {
+            stopTimer();
+            timeLeft = 60;
+            updateTimerDisplay();
+            timerInterval = setInterval(() => {
+                if (!isGameActive) return;
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) { timeLeft = 0; updateTimerDisplay(); endGame('timeout'); }
+            }, 1000);
+        }
+        function updateTimerDisplay() {
+            const mins = Math.floor(timeLeft / 60);
+            const secs = timeLeft % 60;
+            timerDisplay.textContent = `⏱️ ${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        function updateSkipDisplay() {
+            skipCountSpan.textContent = skipsRemaining;
+            skipBtn.disabled = (skipsRemaining <= 0 || !isGameActive || !clickEnabled);
+        }
+
         function shouldEnableCountryInteraction() {
             if (!isGameActive || !clickEnabled) return false;
-            if (currentMode === 'metropoles') return false;
-            if (currentMode === 'mixte' && currentTarget && currentTarget.type === 'ville') return false;
+            if (!currentTarget) return false;
+            if (currentTarget.type === 'ville') return false;
             return true;
         }
 
-        // Normalisation
+        function resetAllCountryStyles() {
+            allCountryLayers.forEach(layer => layer.setStyle(defaultStyle));
+        }
+
+        // Normalisation pays
         function normalizeToStandardEnglish(rawName) {
             if (!rawName) return null;
             let normalized = rawName.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -423,219 +293,118 @@
             return normalized.replace(/\b\w/g, l => l.toUpperCase());
         }
         function findFrenchName(standardEnglish) {
-            for (let [fr, en] of Object.entries(PAYS_MAP)) {
-                if (en === standardEnglish) return fr;
-            }
+            for (let [fr, en] of Object.entries(PAYS_MAP)) if (en === standardEnglish) return fr;
             return null;
         }
 
-        function resetAllCountryStyles() {
-            allCountryLayers.forEach(layer => layer.setStyle(defaultStyle));
-        }
-
-        // Gestion du clic sur un pays (avec paramètre d'événement e)
-        function handleCountryClick(frenchNameOrNull, layer, e) {
-            L.DomEvent.stopPropagation(e);
+        // Gestion clic pays
+        function onCountryLayerClick(e) {
+            const layer = e.target;
+            const frenchName = layer._frenchName || null;
             
             if (!shouldEnableCountryInteraction()) return;
+            L.DomEvent.stopPropagation(e);
             if (!currentTarget || currentTarget.type !== 'pays') return;
+            
+            processAnswer(frenchName === currentTarget.name, frenchName, layer);
+        }
+
+        // Traitement de la réponse
+        function processAnswer(isCorrect, clickedName = null, layer = null, distance = null) {
+            if (!isGameActive || !clickEnabled) return;
+            clickEnabled = false;
+            totalAttempts++;
 
             resetAllCountryStyles();
 
-            const isCorrect = (frenchNameOrNull === currentTarget.name);
             let details = "";
+            let earned = 0;
 
             if (isCorrect) {
-                layer.setStyle(correctStyle);
-                details = `✅ ${currentTarget.name} trouvé !`;
-            } else {
-                layer.setStyle(wrongStyle);
-                // Afficher le bon pays en vert (s'il est jouable)
-                const targetLayer = countryLayers.get(currentTarget.name);
-                if (targetLayer) {
-                    targetLayer.setStyle(correctStyle);
-                }
-                details = frenchNameOrNull 
-                    ? `❌ ${frenchNameOrNull} n'est pas ${currentTarget.name}.` 
-                    : `❌ Ce pays n'est pas ${currentTarget.name}.`;
-            }
-
-            clickEnabled = false;
-
-            if (isCorrect) {
-                let base = 30;
+                let base = (currentTarget.type === 'pays') ? 30 : getBasePoints();
                 let multiplier = getStreakMultiplier();
-                let earned = Math.floor(base * multiplier);
-                if (!alreadyKnown.includes(currentTarget.name)) {
-                    alreadyKnown.push(currentTarget.name);
+                earned = Math.floor(base * multiplier);
+                if (currentGameMode === 'arcade' && currentTarget.type === 'ville' && distance !== null) {
+                    const threshold = getThreshold();
+                    const precisionBonus = Math.max(0, Math.floor((1 - distance / threshold) * base));
+                    earned += precisionBonus;
                 }
                 totalPoints += earned;
                 currentStreak++;
                 correctAnswers++;
+                
+                if (currentTarget.type === 'pays' && layer) {
+                    layer.setStyle(correctStyle);
+                }
+                
                 feedbackEl.className = 'feedback correct';
-                feedbackEl.innerHTML = `${details} +${earned} pts (x${multiplier.toFixed(1)}) 🔥 Combo ${currentStreak}`;
-                updateUI();
-                saveHighScore();
+                details = `✅ ${currentTarget.name} trouvé ! +${earned} pts`;
+                if (currentStreak > 1) details += ` 🔥 Combo x${multiplier.toFixed(1)}`;
             } else {
-                lives--;
+                if (currentGameMode === 'arcade') {
+                    lives--;
+                }
                 currentStreak = 0;
                 feedbackEl.className = 'feedback wrong';
-                feedbackEl.innerHTML = `${details} ❌ Combo perdu ! ❤️ restantes : ${lives}`;
-                updateUI();
-                if (lives <= 0) {
-                    isGameActive = false;
-                    clickEnabled = false;
-                    saveLeaderboard();
-                    saveHighScore();
-                    feedbackEl.className = 'feedback gameover';
-                    feedbackEl.innerHTML = `💀 GAME OVER 💀 Score final : ${totalPoints} points | Réussites : ${correctAnswers}<br>Appuie sur "Nouvelle Partie".`;
+                details = `❌ ${clickedName || 'Mauvaise réponse'}. Ce n'est pas ${currentTarget.name}.`;
+                if (currentTarget.type === 'ville' && distance !== null) details += ` (${Math.round(distance)} km)`;
+                
+                // Enregistrer l'erreur
+                if (currentTarget) {
+                    sessionMistakes.push({ ...currentTarget });
+                    if (currentGameMode === 'learn') {
+                        mistakes.push({ ...currentTarget });
+                    }
+                }
+                
+                if (currentTarget.type === 'pays') {
+                    if (layer) layer.setStyle(wrongStyle);
+                    const targetLayer = countryLayers.get(currentTarget.name);
+                    if (targetLayer) targetLayer.setStyle(correctStyle);
                 }
             }
+
+            feedbackEl.innerHTML = details;
+            updateUI();
+
+            // Vérifier game over arcade
+            if (currentGameMode === 'arcade' && lives <= 0) {
+                endGame('lives');
+                return;
+            }
+
+            // Passage automatique
+            setTimeout(() => {
+                if (isGameActive) pickNewTarget();
+            }, 1200);
         }
 
-        // ---------- CHARGEMENT DE TOUS LES PAYS ----------
-        const GEOJSON_SOURCES = [
-            {
-                name: "jsDelivr",
-                url: "https://cdn.jsdelivr.net/npm/world-geojson@1.0.0/countries.geo.json",
-                getName: (f) => f.properties.ADMIN
-            },
-            {
-                name: "OpenDataSoft",
-                url: "https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/world-administrative-boundaries/exports/geojson",
-                getName: (f) => f.properties.name
-            },
-            {
-                name: "GitHub raw",
-                url: "https://raw.githubusercontent.com/Stefie/geojson-world/master/countries.geojson",
-                getName: (f) => f.properties.name
-            }
-        ];
-
-        async function loadAllCountries() {
-            // Nettoyer anciennes couches
-            allCountryLayers.forEach(l => map.removeLayer(l));
-            allCountryLayers = [];
-            countryLayers.clear();
-
-            for (let source of GEOJSON_SOURCES) {
-                try {
-                    feedbackEl.innerHTML = `⏳ Chargement des frontières (${source.name})...`;
-                    const response = await fetch(source.url);
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    const data = await response.json();
-                    if (!data.features) throw new Error("Format invalide");
-
-                    let loadedCount = 0;
-                    for (let feature of data.features) {
-                        const rawName = source.getName(feature);
-                        const standardEnglish = normalizeToStandardEnglish(rawName);
-                        const frenchName = findFrenchName(standardEnglish);
-                        const isPlayable = (frenchName && PAYS_NOMS_FR.includes(frenchName));
-
-                        const layer = L.geoJSON(feature, {
-                            style: defaultStyle,
-                            interactive: true,
-                            onEachFeature: (f, l) => {
-                                l.on({
-                                    mouseover: (e) => {
-                                        if (!shouldEnableCountryInteraction()) return;
-                                        l.setStyle(hoverStyle);
-                                    },
-                                    mouseout: (e) => {
-                                        if (!shouldEnableCountryInteraction()) return;
-                                        l.setStyle(defaultStyle);
-                                    },
-                                    click: (e) => {
-                                        // Important : on passe bien l'événement e
-                                        if (!shouldEnableCountryInteraction()) return;
-                                        if (!clickEnabled) return;
-                                        handleCountryClick(frenchName || null, l, e);
-                                    }
-                                });
-                            }
-                        }).addTo(map);
-
-                        allCountryLayers.push(layer);
-                        if (isPlayable) {
-                            countryLayers.set(frenchName, layer);
-                        }
-                        loadedCount++;
-                    }
-                    if (loadedCount > 0) {
-                        frontiersLoaded = true;
-                        feedbackEl.innerHTML = `✅ ${loadedCount} pays affichés (${countryLayers.size} jouables) depuis ${source.name}.`;
-                        console.log(`✅ Pays jouables :`, Array.from(countryLayers.keys()));
-                        setTimeout(() => refreshFeedback(), 1500);
-                        return true;
-                    }
-                } catch (e) {
-                    console.warn(`Source ${source.name} échouée:`, e);
-                    feedbackEl.innerHTML = `⚠️ ${source.name} indisponible, tentative suivante...`;
-                }
-            }
-            frontiersLoaded = false;
-            feedbackEl.innerHTML = "❌ Aucune frontière chargée. Mode pays désactivé.";
-            return false;
-        }
-
-        // ---------- MÉTROPOLES (CLIC CARTE) ----------
+        // Clic sur la carte (métropoles)
         function onMapClick(e) {
-            if (!isGameActive) return;
-            if (!clickEnabled) return;
+            if (!isGameActive || !clickEnabled) return;
             if (!currentTarget) { pickNewTarget(); return; }
-            if (currentTarget.type === 'pays') return; // géré par les polygones
+            if (currentTarget.type === 'pays') return;
 
             const { lat, lng } = e.latlng;
-            const targetLat = currentTarget.lat, targetLng = currentTarget.lng;
-            const distance = turf.distance(turf.point([lng, lat]), turf.point([targetLng, targetLat]), { units: 'kilometers' });
+            const target = METROPOLES_COORDS[currentTarget.name];
+            const distance = turf.distance(turf.point([lng, lat]), turf.point([target.lng, target.lat]), { units: 'kilometers' });
             const isCorrect = distance <= getThreshold();
-            const details = isCorrect ? `✅ ${currentTarget.name} à ${Math.round(distance)} km` : `❌ ${currentTarget.name} est à ${Math.round(distance)} km (seuil ${getThreshold()} km)`;
 
+            // Marqueurs
             if (window.userMarker) map.removeLayer(window.userMarker);
             if (window.solutionMarker) map.removeLayer(window.solutionMarker);
             if (window.distanceLine) map.removeLayer(window.distanceLine);
-
             window.userMarker = L.marker([lat, lng], { icon: L.divIcon({ className: 'user-marker', html: '📍', iconSize: [24,24] }) }).addTo(map);
             const starIcon = L.divIcon({ className: 'solution-star', html: '⭐', iconSize: [28,28] });
-            window.solutionMarker = L.marker([targetLat, targetLng], { icon: starIcon }).addTo(map);
-            const pts = [[lat, lng], [targetLat, targetLng]];
+            window.solutionMarker = L.marker([target.lat, target.lng], { icon: starIcon }).addTo(map);
+            const pts = [[lat, lng], [target.lat, target.lng]];
             window.distanceLine = L.polyline(pts, { color: isCorrect ? '#2ecc71' : '#e74c3c', weight: 3, dashArray: isCorrect ? null : '8,6' }).addTo(map);
             window.distanceLine.bindTooltip(`${Math.round(distance)} km`, { permanent: true, direction: 'center', className: 'distance-tooltip' });
-            map.setView([targetLat, targetLng], Math.max(map.getZoom(), 4));
 
-            clickEnabled = false;
-
-            if (isCorrect) {
-                let base = getBasePoints();
-                let multiplier = getStreakMultiplier();
-                let earned = Math.floor(base * multiplier);
-                if (!alreadyKnown.includes(currentTarget.name)) alreadyKnown.push(currentTarget.name);
-                totalPoints += earned;
-                currentStreak++;
-                correctAnswers++;
-                feedbackEl.className = 'feedback correct';
-                feedbackEl.innerHTML = `${details} +${earned} pts (x${multiplier.toFixed(1)}) 🔥 Combo ${currentStreak}`;
-                updateUI();
-                saveHighScore();
-            } else {
-                lives--;
-                currentStreak = 0;
-                feedbackEl.className = 'feedback wrong';
-                feedbackEl.innerHTML = `${details} ❌ Combo perdu ! ❤️ restantes : ${lives}`;
-                updateUI();
-                if (lives <= 0) {
-                    isGameActive = false;
-                    clickEnabled = false;
-                    saveLeaderboard();
-                    saveHighScore();
-                    feedbackEl.className = 'feedback gameover';
-                    feedbackEl.innerHTML = `💀 GAME OVER 💀 Score final : ${totalPoints} points | Réussites : ${correctAnswers}<br>Appuie sur "Nouvelle Partie".`;
-                }
-            }
+            processAnswer(isCorrect, null, null, distance);
         }
 
-        // ---------- SÉLECTION DE CIBLE ----------
+        // Choisir une nouvelle cible
         function pickNewTarget() {
             if (!isGameActive) return;
             if (window.userMarker) map.removeLayer(window.userMarker);
@@ -643,54 +412,218 @@
             if (window.distanceLine) map.removeLayer(window.distanceLine);
             resetAllCountryStyles();
 
-            let pool = [];
-            if (currentMode === 'pays') {
-                if (!frontiersLoaded) {
-                    feedbackEl.innerHTML = "⚠️ Frontières non chargées.";
-                    return;
-                }
-                pool = PAYS_NOMS_FR.map(n => ({ type: 'pays', name: n })).filter(e => !alreadyKnown.includes(e.name));
-            } else if (currentMode === 'metropoles') {
-                pool = METROPOLES.map(c => ({ type: 'ville', name: c.name, lat: c.lat, lng: c.lng })).filter(e => !alreadyKnown.includes(e.name));
+            let candidates = [];
+            if (currentTargetType === 'pays') {
+                candidates = PAYS_LIST.map(n => ({ type: 'pays', name: n }));
+            } else if (currentTargetType === 'metropoles') {
+                candidates = METROPOLES_LIST.map(n => ({ type: 'ville', name: n, lat: METROPOLES_COORDS[n].lat, lng: METROPOLES_COORDS[n].lng }));
             } else {
-                let paysItems = PAYS_NOMS_FR.map(n => ({ type: 'pays', name: n }));
-                let villesItems = METROPOLES.map(c => ({ type: 'ville', name: c.name, lat: c.lat, lng: c.lng }));
-                pool = [...paysItems, ...villesItems];
-                if (!frontiersLoaded) pool = villesItems;
-                pool = pool.filter(e => !alreadyKnown.includes(e.name));
+                let pays = PAYS_LIST.map(n => ({ type: 'pays', name: n }));
+                let villes = METROPOLES_LIST.map(n => ({ type: 'ville', name: n, lat: METROPOLES_COORDS[n].lat, lng: METROPOLES_COORDS[n].lng }));
+                candidates = [...pays, ...villes];
             }
 
-            if (pool.length === 0) {
-                feedbackEl.innerHTML = "🎉 FÉLICITATIONS ! Toutes les cibles trouvées !";
-                isGameActive = false;
-                saveLeaderboard();
-                return;
+            // En mode apprendre, on peut filtrer les erreurs si on rejoue
+            // Sinon, tirage normal
+            let filtered = candidates;
+            if (currentGameMode === 'learn' && mistakes.length > 0) {
+                // Si on a des erreurs stockées, on les utilise (mode révision)
+                filtered = mistakes;
+            } else {
+                // Éviter répétition immédiate
+                filtered = candidates.filter(c => c.name !== lastTargetName);
+                if (filtered.length === 0) filtered = candidates;
             }
 
-            currentTarget = { ...pool[Math.floor(Math.random() * pool.length)] };
+            const rand = filtered[Math.floor(Math.random() * filtered.length)];
+            currentTarget = { ...rand };
+            lastTargetName = currentTarget.name;
             targetNameEl.textContent = currentTarget.name;
-            refreshFeedback();
+            feedbackEl.innerHTML = `🎯 Où se trouve ${currentTarget.name} ? ${currentTarget.type === 'pays' ? '(Clique sur le pays)' : `(Seuil ${getThreshold()} km)`}`;
             clickEnabled = true;
+            updateSkipDisplay();
             map.setView([20, 0], 2);
         }
 
-        function resetGame() {
-            totalPoints = 0; currentStreak = 0; lives = 3; alreadyKnown = []; correctAnswers = 0;
-            isGameActive = true; clickEnabled = true;
-            updateUI(); loadHighScore();
-            pickNewTarget();
-            feedbackEl.className = 'feedback';
-            feedbackEl.innerHTML = "✨ Nouvelle partie ! ✨";
-            if (window.userMarker) map.removeLayer(window.userMarker);
-            if (window.solutionMarker) map.removeLayer(window.solutionMarker);
-            if (window.distanceLine) map.removeLayer(window.distanceLine);
-            resetAllCountryStyles();
+        function endGame(reason) {
+            if (!isGameActive) return;
+            isGameActive = false;
+            clickEnabled = false;
+            stopTimer();
+            
+            let title = 'Session terminée';
+            let details = '';
+            let showRetry = false;
+
+            if (currentGameMode === 'learn') {
+                const percent = totalAttempts > 0 ? Math.round((correctAnswers / totalAttempts) * 100) : 0;
+                details = `Score : ${totalPoints} pts<br>Réussites : ${correctAnswers}/${totalAttempts} (${percent}%)`;
+                if (mistakes.length > 0) {
+                    showRetry = true;
+                    details += `<br>Erreurs : ${mistakes.length} localisation(s) à revoir.`;
+                }
+                // Sauvegarder le meilleur score arcade ? non
+            } else if (reason === 'lives') {
+                title = '💀 Game Over';
+                details = `Plus de vies.<br>Score final : ${totalPoints} pts<br>Réussites : ${correctAnswers}`;
+                saveArcadeScore();
+            } else if (reason === 'timeout') {
+                title = '⏰ Temps écoulé';
+                details = `Score final : ${totalPoints} pts<br>Réussites : ${correctAnswers}`;
+                saveArcadeScore();
+            }
+
+            resultTitle.innerHTML = title;
+            resultDetails.innerHTML = details;
+            retryMistakesBtn.style.display = showRetry ? 'inline-block' : 'none';
+            resultModal.style.display = 'flex';
         }
 
-        function setMode(mode) {
-            currentMode = mode;
+        function saveArcadeScore() {
+            if (totalPoints === 0) return;
+            const key = `arcade_hof_${currentTargetType}_${getThreshold()}`;
+            let scores = JSON.parse(localStorage.getItem(key)) || [];
+            scores.push({ points: totalPoints, correct: correctAnswers, date: new Date().toLocaleDateString() });
+            scores.sort((a,b) => b.points - a.points);
+            scores = scores.slice(0, 10);
+            localStorage.setItem(key, JSON.stringify(scores));
+        }
+
+        function displayHallOfFame() {
+            let html = '';
+            const types = ['pays', 'metropoles', 'mixte'];
+            const thresholds = ['1000','700','300','100','50','10','1'];
+            for (let type of types) {
+                for (let th of thresholds) {
+                    const key = `arcade_hof_${type}_${th}`;
+                    const data = JSON.parse(localStorage.getItem(key)) || [];
+                    if (data.length) {
+                        html += `<h3>${type.toUpperCase()} · seuil ${th} km</h3><table class="leaderboard-table"><tr><th>Score</th><th>Réussites</th><th>Date</th></tr>`;
+                        data.slice(0,5).forEach(e => {
+                            html += `<tr><td>${e.points}</td><td>${e.correct}</td><td>${e.date}</td></tr>`;
+                        });
+                        html += `</table><br>`;
+                    }
+                }
+            }
+            hallOfFameContent.innerHTML = html || '<p>Aucun score enregistré. Joue en mode Arcade !</p>';
+        }
+
+        function retryMistakes() {
+            if (mistakes.length === 0) return;
+            // On passe en mode révision : le pool devient les erreurs
+            currentGameMode = 'learn';
+            modeBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.mode === 'learn'));
+            // On garde les erreurs dans mistakes, elles seront utilisées dans pickNewTarget
+            // Réinitialiser les compteurs de session
+            totalPoints = 0; currentStreak = 0; correctAnswers = 0; totalAttempts = 0;
+            sessionMistakes = [];
+            isGameActive = true; clickEnabled = true;
+            updateUI();
+            stopTimer();
+            timerDisplay.style.display = 'none';
+            skipContainer.style.display = 'none';
+            stopLearnBtn.style.display = 'inline-block';
+            pickNewTarget();
+            feedbackEl.className = 'feedback';
+            feedbackEl.innerHTML = "📚 Révision des erreurs !";
+            resultModal.style.display = 'none';
+        }
+
+        function resetGameState() {
+            totalPoints = 0; currentStreak = 0; correctAnswers = 0; totalAttempts = 0;
+            sessionMistakes = []; lastTargetName = null;
+            if (currentGameMode === 'arcade') {
+                lives = 3;
+                skipsRemaining = MAX_SKIPS;
+            } else {
+                lives = Infinity;
+                mistakes = []; // on réinitialise les erreurs pour une nouvelle session
+            }
+            isGameActive = true; clickEnabled = true;
+            updateUI();
+            if (currentGameMode === 'arcade') {
+                updateSkipDisplay();
+                startArcadeTimer();
+            }
+            pickNewTarget();
+            feedbackEl.className = 'feedback';
+        }
+
+        function initSession() {
+            stopTimer();
+            if (currentGameMode === 'learn') {
+                timerDisplay.style.display = 'none';
+                skipContainer.style.display = 'none';
+                stopLearnBtn.style.display = 'inline-block';
+                lives = Infinity;
+            } else {
+                timerDisplay.style.display = 'flex';
+                skipContainer.style.display = 'flex';
+                stopLearnBtn.style.display = 'none';
+                lives = 3;
+            }
+            resetGameState();
+            feedbackEl.innerHTML = currentGameMode === 'learn' ? "📚 Mode Apprendre – cœurs infinis" : "🕹️ Mode Arcade – 1 minute !";
+        }
+
+        function setGameMode(mode) {
+            currentGameMode = mode;
             modeBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
-            resetGame();
+            initSession();
+        }
+
+        function setTargetType(type) {
+            currentTargetType = type;
+            typeBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.type === type));
+            initSession();
+        }
+
+        // Chargement des frontières
+        const GEOJSON_SOURCES = [
+            { name: "jsDelivr", url: "https://cdn.jsdelivr.net/npm/world-geojson@1.0.0/countries.geo.json", getName: f => f.properties.ADMIN },
+            { name: "OpenDataSoft", url: "https://public.opendatasoft.com/api/explore/v2.1/catalog/datasets/world-administrative-boundaries/exports/geojson", getName: f => f.properties.name },
+            { name: "GitHub raw", url: "https://raw.githubusercontent.com/Stefie/geojson-world/master/countries.geojson", getName: f => f.properties.name }
+        ];
+
+        async function loadAllCountries() {
+            allCountryLayers.forEach(l => map.removeLayer(l));
+            allCountryLayers = [];
+            countryLayers.clear();
+
+            for (let source of GEOJSON_SOURCES) {
+                try {
+                    const response = await fetch(source.url);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const data = await response.json();
+                    if (!data.features) continue;
+
+                    for (let feature of data.features) {
+                        const rawName = source.getName(feature);
+                        const standardEnglish = normalizeToStandardEnglish(rawName);
+                        const frenchName = findFrenchName(standardEnglish);
+                        const isPlayable = (frenchName && PAYS_LIST.includes(frenchName));
+
+                        const layer = L.geoJSON(feature, {
+                            style: defaultStyle,
+                            interactive: true,
+                            onEachFeature: (f, l) => {
+                                l._frenchName = frenchName || null;
+                                l.on({
+                                    mouseover: () => { if (shouldEnableCountryInteraction()) l.setStyle(hoverStyle); },
+                                    mouseout: () => { if (shouldEnableCountryInteraction()) l.setStyle(defaultStyle); },
+                                    click: onCountryLayerClick
+                                });
+                            }
+                        }).addTo(map);
+                        allCountryLayers.push(layer);
+                        if (isPlayable) countryLayers.set(frenchName, layer);
+                    }
+                    frontiersLoaded = true;
+                    return true;
+                } catch (e) { console.warn(e); }
+            }
+            return false;
         }
 
         function initMap() {
@@ -702,28 +635,34 @@
         }
 
         function bindEvents() {
-            modeBtns.forEach(btn => btn.addEventListener('click', () => setMode(btn.dataset.mode)));
-            difficultySelect.addEventListener('change', () => resetGame());
-            skipBtn.addEventListener('click', () => { if(isGameActive) pickNewTarget(); });
-            nextBtn.addEventListener('click', () => { if(isGameActive) pickNewTarget(); });
-            newGameBtn.addEventListener('click', resetGame);
-            showLeaderboardBtn.addEventListener('click', () => { displayLeaderboard(); modal.style.display = 'flex'; });
-            closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
-            window.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+            modeBtns.forEach(btn => btn.addEventListener('click', () => setGameMode(btn.dataset.mode)));
+            typeBtns.forEach(btn => btn.addEventListener('click', () => setTargetType(btn.dataset.type)));
+            newGameBtn.addEventListener('click', () => initSession());
+            stopLearnBtn.addEventListener('click', () => { if (currentGameMode === 'learn') endGame('manual'); });
+            skipBtn.addEventListener('click', () => {
+                if (!isGameActive || !clickEnabled || currentGameMode !== 'arcade' || skipsRemaining <= 0) return;
+                skipsRemaining--;
+                updateSkipDisplay();
+                pickNewTarget();
+            });
+            difficultySelect.addEventListener('change', () => { if (isGameActive) initSession(); });
+            closeResultModalBtn.addEventListener('click', () => resultModal.style.display = 'none');
+            retryMistakesBtn.addEventListener('click', retryMistakes);
+            hallOfFameBtn.addEventListener('click', () => {
+                displayHallOfFame();
+                hallOfFameModal.style.display = 'flex';
+            });
+            closeHallOfFameBtn.addEventListener('click', () => hallOfFameModal.style.display = 'none');
+            window.addEventListener('click', (e) => { 
+                if (e.target === resultModal) resultModal.style.display = 'none';
+                if (e.target === hallOfFameModal) hallOfFameModal.style.display = 'none';
+            });
         }
 
         // Démarrage
         initMap();
         bindEvents();
-        loadAllCountries().then(success => {
-            if (!success && currentMode === 'pays') {
-                currentMode = 'metropoles';
-                document.querySelector('.mode-btn[data-mode="metropoles"]').classList.add('active');
-                document.querySelector('.mode-btn[data-mode="pays"]').classList.remove('active');
-                feedbackEl.innerHTML += " Passage automatique en mode Métropoles.";
-            }
-            resetGame();
-        });
+        loadAllCountries().then(() => initSession());
     })();
 </script>
 </body>
